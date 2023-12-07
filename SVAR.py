@@ -72,6 +72,10 @@ class VAR_output:
 def SVAR(input): # possible mutation of input.df
     output = VAR_output()
     variable_names = [var if input.variables[var] == 0 else 'd'+var for var in input.variables.keys()]
+
+    if input.td_col != "":
+        input.df.set_index(input.td_col, inplace = True)
+
     # Convert to stationary form
     input.df = input.df[list(input.variables.keys())]
     for var in input.variables:
@@ -85,10 +89,7 @@ def SVAR(input): # possible mutation of input.df
     output.lag_order = results.k_ar
     #print(input.df)
     prediction = model.predict(params=results.params, lags=output.lag_order)
-    output.shock = input.df.iloc[output.lag_order:, :] - prediction
-    print(output.shock)
-    for i in output.shock:
-        pass
+    output.shock = input.df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
     
     # Calculate decomposition matrix M
     irf = results.irf(input.nsteps)
@@ -113,6 +114,9 @@ def SVAR(input): # possible mutation of input.df
     output.ir = irf.irfs
     for i in range(input.nsteps+1):
         output.ir[i] = np.dot(output.ir[i], M)
+    
+    for i in range(len(output.shock)):
+        output.shock.iloc[i, :] = np.dot(np.linalg.inv(M), output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
 
     # VARIANCE DECOMPOSITION NEEDS MORE WORK
     fevd = results.fevd(input.nsteps)
@@ -132,8 +136,6 @@ def SVAR(input): # possible mutation of input.df
                 lower_errband=output.ir_lower, upper_errband=output.ir_upper,
                 show_plot=True, save_plot=True, plot_path=input.savefig_path)
     
-    # output should also include: td, shocks
-
     return output
 
 if __name__ == "__main__":

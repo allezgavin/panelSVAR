@@ -53,7 +53,8 @@ def run_var():
         'G': 1
     }
     shocks = ['other', 'AutFP']
-    td_col = ""
+    td_col = "num" # test td column
+    # td_col = ""
     sr_constraint = [(2,2)]
     lr_constraint = []
     sr_sign = np.array([['.','.'],
