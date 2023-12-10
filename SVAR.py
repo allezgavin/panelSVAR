@@ -120,14 +120,28 @@ def SVAR(input): # possible mutation of input.df
 
     # VARIANCE DECOMPOSITION NEEDS MORE WORK
     fevd = results.fevd(input.nsteps)
-    # print(type(fevd.summary()))
+    fevd.summary()
+
+    ALALT = []
+    for i in range(len(output.ir)):
+        ALALT.append(np.dot(output.ir[i], output.ir[i].T))
+    ALALT = np.array(ALALT)
+
+    VD = ALALT.cumsum(axis=0)
+    VD = np.abs(VD)
+    for i in range(len(VD)):
+        VD[i] /= VD[i].sum(axis=1, keepdims=True)
+    print(VD)
+
+
+
 
     if input.bootstrap:
         errband = np.asarray(irf.errband_mc(repl=input.ndraws, signif=input.signif))
         # errband[0] is lower band and errband[1] is upper band
         for j in [0, 1]:
             for i in range(input.nsteps+1):
-                errband[j,i] = np.dot(errband[j,i], M)
+                errband[j, i] = np.dot(errband[j, i], M)
         output.ir_lower = errband[0]
         output.ir_upper = errband[1]
 

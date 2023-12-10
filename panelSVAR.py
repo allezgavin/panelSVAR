@@ -22,10 +22,11 @@ def panelSVAR(input):
     # lambda_dict = dict() # String member -> np.ndarray Lambda
     # comp_dict = dict()
     members = list(input.df[input.member_col].unique())
-    elements = ["IR"+str(vr)+str(sk)+"_"+str(lg) for vr in input.size for sk in input.size for lg in input.nsteps] # lg(Lag) is the innermost loop
+    elements = ["IR"+str(vr)+str(sk)+"_"+str(lg) for vr in range(1,input.size)
+                for sk in range(1,input.size) for lg in range(input.nsteps+1)] # lg(Lag) is the innermost loop
     
     # Initialize output spreadsheets
-    comp_df = pd.DataFrame(index=members, columns=elements, data=np.zeros((len(members),len(elements))))
+    comp_df = pd.DataFrame(index=members, columns=elements)
     comm_df = comp_df.copy()
     idio_df = comp_df.copy()
     lambda_df = pd.DataFrame(index=members, columns=["Lambda"+str(i)+str(j) for i in range(input.size) for j in range(input.size)])
