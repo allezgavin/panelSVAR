@@ -8,16 +8,27 @@ from scipy.stats import linregress
 
 class Panel_output:
     __slots__ = []
-    def __init__(self, ir_comm=None):
-        self.ir_comm = ir_comm
+    def __init__(self, comp_df=None, comm_df=None, idio_df=None, lambda_df=None):
+        self.comp_df = comp_df
+        self.comm_df = comm_df
+        self.idio_df = idio_df
+        self.lambda_df = lambda_df
 
 def panelSVAR(input):
     """
     __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     """
-    lambda_dict = dict() # String member -> np.ndarray Lambda
-    comp_dict = dict()
+    # lambda_dict = dict() # String member -> np.ndarray Lambda
+    # comp_dict = dict()
+    members = list(input.df[input.member_col].unique())
+    elements = ["IR"+str(vr)+str(sk)+"_"+str(lg) for vr in input.size for sk in input.size for lg in input.nsteps] # lg(Lag) is the innermost loop
+    
+    # Initialize output spreadsheets
+    comp_df = pd.DataFrame(index=members, columns=elements, data=np.zeros((len(members),len(elements))))
+    comm_df = comp_df.copy()
+    idio_df = comp_df.copy()
+    lambda_df = pd.DataFrame(index=members, columns=["Lambda"+str(i)+str(j) for i in range(input.size) for j in range(input.size)])
 
     variable_cols = list(input.variables.keys())
     # Common shock
@@ -37,7 +48,6 @@ def panelSVAR(input):
                                       # This df changes
                                       df=member_df, plot=False)
         member_output = SVAR(member_svar_input)
-        comp_dict[member] = member_output
 
         composite_shock = member_output.shock
         # Merge with the common shock on index (td)
@@ -58,15 +68,25 @@ def panelSVAR(input):
         # lin.fit(X, y)
         # Lambda = lin.coef_.T # Must transpose
 
-        lambda_dict[member] = Lambda
+        # comp_dict[member] = member_output
+        # lambda_dict[member] = Lambda
         
+        # Write into dataframes
+        comp_df.loc[member, :] = member_output.reshape(1,)
         # impulse response to common shock = A*Lambda
+        comm_df.loc[member, :] = np.dot(member_output, Lambda).reshape(1,)
         # impulse response to idiosyncratic shock = A*(I-Lambda*Lambda')^(1/2)
-
+        idio_df.loc[member, :] = np.dot(member_output, np.sqrt(np.identity(input.size)-Lambda)).reshape(1,)
         
+        lambda_df.loc[member, :] = Lambda.reshape(1,)
+        
+    output = Panel_output(comp_df, comm_df, idio_df, lambda_df)
 
+    # Write into the spreadsheets
+    # Same nomenclature as Pedroni's RATS code
+    comp_df.to_excel("ind-IRs-to-composite-shocks.xlsx", sheet_name="ind-IRs-to-composite-shocks")
+    comm_df.to_excel("ind-IRs-to-common-shocks.xlsx", sheet_name="ind-IRs-to-common-shocks")
+    idio_df.to_excel("ind-IRs-to-idiosyncratic-shocks.xlsx", sheet_name="ind-IRs-to-idiosyncratic-shocks")
+    lambda_df.to_excel("lambda-matrices.xlsx", sheet_name = "lambda-matrices")
 
-
-    
-    output = Panel_output()
     return output
