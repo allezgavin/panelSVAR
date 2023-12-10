@@ -10,7 +10,7 @@ class VAR_input:
     __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     
-    def __init__(self, variables, shocks, td_col="", member_col="", sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
+    def __init__(self, variables, shocks, td_col=[], member_col="", sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
                  maxlags=5, nsteps=12, lagmethod='aic', bootstrap=True, ndraws=2000, signif=0.05,
                  excel_path="", excel_sheet_name="", df=None, plot=True, savefig_path=""):
         # Build input dataframe
@@ -20,8 +20,8 @@ class VAR_input:
             else:
                 raise ValueError("Please specify excel sheet name.")
         else:
-            if df != None:
-                self.df = df.copy() # CHECK IF COPIED!!!
+            if len(df) > 0:
+                self.df = df.copy()
             else:
                 raise ValueError("Empty input data.")
         
@@ -32,7 +32,7 @@ class VAR_input:
             raise ValueError("Variable and shock have different dimensions.")
         
         self.td_col = td_col
-        if td_col == "":
+        if len(td_col) == 0:
             print("Td column not specified. Assuming data is sorted.")
         else:
             self.df.sort_values(by=td_col, inplace=True)
@@ -74,7 +74,7 @@ def SVAR(input): # possible mutation of input.df
     output = VAR_output()
     variable_names = [var if input.variables[var] == 0 else 'd'+var for var in input.variables.keys()]
 
-    if input.td_col != "":
+    if len(input.td_col)>0:
         input.df.set_index(input.td_col, inplace = True)
 
     # Convert to stationary form
@@ -121,7 +121,7 @@ def SVAR(input): # possible mutation of input.df
 
     # VARIANCE DECOMPOSITION NEEDS MORE WORK
     fevd = results.fevd(input.nsteps)
-    fevd.summary()
+    # fevd.summary()
 
     ALALT = []
     for i in range(len(output.ir)):
@@ -132,7 +132,7 @@ def SVAR(input): # possible mutation of input.df
     VD = np.abs(VD)
     for i in range(len(VD)):
         VD[i] /= VD[i].sum(axis=1, keepdims=True)
-    print(VD)
+    # print(VD)
 
 
 

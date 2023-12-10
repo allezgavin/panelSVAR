@@ -12,8 +12,7 @@ def run_panel():
         'ae' : 1,
     }
     shocks = ['real', 'nominal']
-    td_col = "" # Does not use a time column
-    # td_col = "Year"
+    td_col = ["Year", "Month"]
     member_col = "country"
     sr_constraint = []
     lr_constraint = [(1,2)]
