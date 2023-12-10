@@ -18,7 +18,7 @@ def shortAndLong(size, sr_constraint, lr_constraint, F1):
         return np.linalg.norm(np.dot(recovered, recovered.T)-omega, 'fro')
 
     def sr_constraint_func(x, sr_cons):
-        return x[size*(sr_cons[0]-1) + sr_cons[1]-1]
+        return x[size*(sr_cons[1]-1) + sr_cons[0]-1]
     def lr_constraint_func(x, lr_cons):
         return np.dot(F1[lr_cons[0]-1, :], get_col(x, lr_cons[1]))
     cons = []
