@@ -38,7 +38,7 @@ def panelSVAR(input):
         if input.variables[var] == 1:
             input.variables[var] = 0
             unit_root_var.append(var)
-    input.df[unit_root_var] = input.df.groupby(input.member_col)[unit_root_var].transform(lambda x : x - x.shift(1))
+    input.df[unit_root_var] = input.df.groupby(input.member_col)[unit_root_var].transform(lambda x : np.log(x) - np.log(x).shift(1))
 
     average_df = input.df.groupby(input.td_col)[variable_cols].mean()
     comm_svar_input = VAR_input(input.variables, input.shocks, [], "",
