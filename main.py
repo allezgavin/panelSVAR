@@ -68,27 +68,22 @@ def run_var():
     # INPUT SECTION
     plot = True
     savefig_path = ""
-    excel_path = "AustraliaData.xlsx"
-    excel_sheet_name = "Panel6_comm_all"
+    excel_path = "bqdata.xlsx"
+    excel_sheet_name = "econ471-bqdata"
     variables = {
         # 1 for unit root, 0 for stationary
-        'Yreal' : 1,
-        # 'Govnom' : 1,
-        'CPI' : 1,
-        'G': 1
+        'dGDPADJUST' : 0,
+        'URADJUST' : 0
     }
-    shocks = ['GDPshock', 'CPIshock', 'Gshock']
-    td_col = "num" # test td column
-    # td_col = ""
+    shocks = ['AS', 'AD']
+    td_col = ""
     member_col = "" # Not a panel so no member column
-    sr_constraint = [[1,2],[1,3],[2,3]]
-    lr_constraint = []
-    sr_sign = np.array([['.','.','.'],
-                        ['.','.','.'],
-                        ['.','.','.']])
-    lr_sign = np.array([['.','.','.'],
-                        ['.','.','.'],
-                        ['.','.','.']])
+    sr_constraint = []
+    lr_constraint = [(1,2)]
+    sr_sign = np.array([['.','+'],
+                        ['.','.']])
+    lr_sign = np.array([['+','.'],
+                        ['.','.']])
     maxlags = 4 # maximum lags to be considered for common shock responses
     nsteps = 15 # desired number of steps for the impulse responses
     lagmethod = 'aic'
@@ -104,5 +99,5 @@ def run_var():
     SVAR(var_input)
 
 if __name__ == "__main__":
-    # run_var()
-    run_panel()
+    run_var()
+    # run_panel()
