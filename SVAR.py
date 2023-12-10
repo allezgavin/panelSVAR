@@ -7,10 +7,10 @@ from shortAndLong import shortAndLong
 
 # Encapsulation of input to provide default values and keep modularity
 class VAR_input:
-    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
+    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     
-    def __init__(self, variables, shocks, td_col="", sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
+    def __init__(self, variables, shocks, td_col="", member_col="", sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
                  maxlags=5, nsteps=12, lagmethod='aic', bootstrap=True, ndraws=2000, signif=0.05,
                  excel_path="", excel_sheet_name="", df=None, plot=True, savefig_path=""):
         # Build input dataframe
@@ -36,6 +36,7 @@ class VAR_input:
             print("Td column not specified. Assuming data is sorted.")
         else:
             self.df.sort_values(by=td_col, inplace=True)
+        self.member_col = member_col
         
         self.sr_constraint = sr_constraint
         self.lr_constraint = lr_constraint

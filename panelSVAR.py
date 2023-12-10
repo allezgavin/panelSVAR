@@ -16,7 +16,7 @@ class Panel_output:
 
 def panelSVAR(input):
     """
-    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
+    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     """
     # lambda_dict = dict() # String member -> np.ndarray Lambda
@@ -39,10 +39,9 @@ def panelSVAR(input):
     common_output = SVAR(input)
     common_shock = common_output.shock
 
-    #member_col
     # Composite shock
     for member, member_df in input.df.groupby(input.member_col):
-        member_svar_input = VAR_input(input.variables, input.shocks, input.td_col,
+        member_svar_input = VAR_input(input.variables, input.shocks, input.td_col, "",
                                       input.sr_constraint, input.lr_constraint, input.sr_sign, input.lr_sign,
                                       input.maxlags, input.nsteps, input.lagmethod, input.bootstrap,
                                       input.ndraws, input.signif, excel_path="", excel_sheet_name="",
