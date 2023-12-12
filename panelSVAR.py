@@ -15,23 +15,17 @@ class Panel_output:
         self.lambda_df = lambda_df
 
 def panelSVAR(input):
-    # lambda_dict = dict() # String member -> np.ndarray Lambda
-    # comp_dict = dict()
+    # Process input dataframe
+    if len(input.td_col) == 0:
+        raise ValueError("Must include time column for panel data.")
+    if input.member_col not in input.df:
+        raise ValueError("Invaid panel member column.")
+    input.df.sort_values(by=[input.member_col]+input.td_col, inplace=True)
+    
     members = list(input.df[input.member_col].unique())
     elements = ["IR"+str(vr)+str(sk)+"_"+str(lg) for vr in range(1,input.size+1)
                 for sk in range(1,input.size+1) for lg in range(input.nsteps+1)] # lg(Lag) is the innermost loop
-    
-    # Initialize output spreadsheets
-    comp_df = pd.DataFrame(index=members, columns=elements)
-    comm_df = comp_df.copy()
-    idio_df = comp_df.copy()
-    lambda_df = pd.DataFrame(index=members, columns=["Lambda"+str(i)+str(j) for i in range(1,input.size+1) for j in range(1,input.size+1)])
-
     variable_cols = list(input.variables.keys())
-    # Common shock
-    if len(input.td_col) == 0:
-        raise ValueError("Must include time column for panel data.")
-    input.df.sort_values(by=input.td_col, inplace=True)
     
     unit_root_var = []
     for var in input.variables:
@@ -40,6 +34,15 @@ def panelSVAR(input):
             unit_root_var.append(var)
     input.df[unit_root_var] = input.df.groupby(input.member_col)[unit_root_var].transform(lambda x : np.log(x) - np.log(x).shift(1))
 
+    # Initialize output spreadsheets
+    comp_df = pd.DataFrame(index=members, columns=elements)
+    comm_df = comp_df.copy()
+    idio_df = comp_df.copy()
+    lambda_df = pd.DataFrame(index=members, columns=["Lambda"+str(i)+str(j) for i in range(1,input.size+1) for j in range(1,input.size+1)])
+    # lambda_dict = dict() # String member -> np.ndarray Lambda
+    # comp_dict = dict()
+
+    # Common shock
     average_df = input.df.groupby(input.td_col)[variable_cols].mean()
     comm_svar_input = VAR_input(input.variables, input.shocks, [], "",
                                 input.sr_constraint, input.lr_constraint, input.sr_sign, input.lr_sign,
