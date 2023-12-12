@@ -72,9 +72,10 @@ class VAR_output:
         
 def SVAR(input): # possible mutation of input.df
     output = VAR_output()
-    variable_names = [var if input.variables[var] == 0 else 'd'+var for var in input.variables.keys()]
+    # variable_names = [var if input.variables[var] == 0 else 'd'+var for var in input.variables.keys()]
+    variable_names = list(input.variables.keys())
 
-    if len(input.td_col)>0:
+    if len(input.td_col) > 0:
         input.df.set_index(input.td_col, inplace = True)
 
     # Convert to stationary form
@@ -123,6 +124,24 @@ def SVAR(input): # possible mutation of input.df
     for i in range(len(output.shock)):
         output.shock.iloc[i, :] = np.dot(np.linalg.inv(M), output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
 
+    if input.bootstrap:
+        errband = np.asarray(irf.errband_mc(repl=input.ndraws, signif=input.signif))
+        # errband[0] is lower band and errband[1] is upper band
+        for j in [0, 1]:
+            for i in range(input.nsteps+1):
+                errband[j, i] = np.dot(errband[j, i], M)
+        output.ir_lower = errband[0]
+        output.ir_upper = errband[1]
+
+    # # Convert to impulse reponse of steady state for unit root variables
+    # # The bootstrapping results don't make sens now
+    # for i, var in enumerate(variable_names):
+    #     if input.variables[var] == 1:
+    #         output.ir[:, i, :] = output.ir[:, i, :].cumsum(axis=0)
+    #         if input.bootstrap:
+    #             output.ir_lower[:, i, :] = output.ir_lower[:, i, :].cumsum(axis=0)
+    #             output.ir_upper[:, i, :] = output.ir_upper[:, i, :].cumsum(axis=0)
+
     # VARIANCE DECOMPOSITION NEEDS MORE WORK
     fevd = results.fevd(input.nsteps)
     # fevd.summary()
@@ -141,14 +160,7 @@ def SVAR(input): # possible mutation of input.df
 
 
 
-    if input.bootstrap:
-        errband = np.asarray(irf.errband_mc(repl=input.ndraws, signif=input.signif))
-        # errband[0] is lower band and errband[1] is upper band
-        for j in [0, 1]:
-            for i in range(input.nsteps+1):
-                errband[j, i] = np.dot(errband[j, i], M)
-        output.ir_lower = errband[0]
-        output.ir_upper = errband[1]
+
 
     if input.plot:
         plot_ir(variable_names, input.shocks, output.ir,

@@ -77,7 +77,7 @@ def run_panel():
     panelSVAR(panel_input)
 
 def run_var():
-    """
+    
     # EXAMPLE IMPUT BELOW
     plot = True
     savefig_path = ""
@@ -87,18 +87,18 @@ def run_var():
         # 1 for unit root, 0 for stationary
         'Yreal' : 1,
         # 'Govnom' : 1,
-        # 'CPI' : 1,
-        'G': 1
+        'CPI' : 1,
+        # 'G': 1
     }
-    shocks = ['other', 'AutFP']
-    td_col = "num" # test td column
-    # td_col = ""
-    sr_constraint = [(2,2)]
-    lr_constraint = []
+    shocks = ['AS', 'AD']
+    td_col = ""
+    member_col = ""
+    sr_constraint = []
+    lr_constraint = [(1,2)]
     sr_sign = np.array([['.','.'],
-                        ['.','.']])
-    lr_sign = np.array([['.','.'],
                         ['.','+']])
+    lr_sign = np.array([['+','.'],
+                        ['.','.']])
     maxlags = 4 # maximum lags to be considered for common shock responses
     nsteps = 15 # desired number of steps for the impulse responses
     lagmethod = 'aic'
@@ -135,7 +135,7 @@ def run_var():
     ndraws = 2000
     signif = 0.05 # significance level of bootstrap
     
-    """
+    
     # INPUT SECTION
     plot = True
     savefig_path = ""
