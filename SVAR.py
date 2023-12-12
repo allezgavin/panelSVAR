@@ -86,19 +86,22 @@ def SVAR(input): # possible mutation of input.df
 
     model = VAR(input.df)
     results = model.fit(maxlags=input.maxlags, ic=input.lagmethod)
-    # print(results.params)
+    # print(results.params) # VAR coefficients
+    # print(results.sigma_u) # Covariance matrix Omega_mu
     output.lag_order = results.k_ar
-    #print(input.df)
+    # print(input.df)
     prediction = model.predict(params=results.params, lags=output.lag_order)
     output.shock = input.df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
     
-    # Calculate decomposition matrix M
+    # Estimate impulse response, without any transformation of the shocks (FACTOR = %identity(m))
     irf = results.irf(input.nsteps)
-    # Get numerical
+    # print(irf.irfs)
+
+    # Calculate decomposition matrix M
     F1 = np.zeros((input.size, input.size))
     for f in irf.irfs:
         F1 += f
-    M = shortAndLong(input.size, input.sr_constraint, input.lr_constraint, F1)
+    M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
     A1 = np.dot(F1, M)
     # Sign constraint
     signmat = np.identity(input.size)
@@ -111,6 +114,7 @@ def SVAR(input): # possible mutation of input.df
             if switch_sign:
                 signmat[j, j] = -1
     M = np.dot(M, signmat)
+    # print(M) # The M, or A0 matrix
 
     output.ir = irf.irfs
     for i in range(input.nsteps+1):

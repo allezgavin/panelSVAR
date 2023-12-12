@@ -15,7 +15,10 @@ from SVAR import *
 from panelSVAR import *
 
 def run_panel():
-    plot = True # Does not plot anyways
+    """
+    EXAMPLE INPUT BELOW
+
+    plot = False
     savefig_path = ""
     excel_path = "pedroni_ppp.xls"
     excel_sheet_name = "Sheet1"
@@ -31,6 +34,32 @@ def run_panel():
     lr_constraint = [(1,2)]
     sr_sign = np.array([['+','.'],
                         ['.','+']])
+    lr_sign = np.array([['.','.'],
+                        ['.','.']])
+    maxlags = 4 # maximum lags to be considered for common shock responses
+    nsteps = 15   # desired number of steps for the impulse responses
+    lagmethod = 'aic'
+
+    bootstrap = False
+    ndraws = 2000
+    signif = 0.05 # significance level of bootstrap
+    """
+    plot = False
+    savefig_path = ""
+    excel_path = "test-run.xls"
+    excel_sheet_name = "Panel6_comm_all"
+    variables = {
+        # 1 for unit root, 0 for stationary
+        'CommodityIndex' : 1,
+        'Yreal' : 1,
+    }
+    shocks = ['Real', 'Nominal']
+    td_col = ["time"]
+    member_col = "country"
+    sr_constraint = []
+    lr_constraint = [(1,2)]
+    sr_sign = np.array([['+','+'],
+                        ['.','.']])
     lr_sign = np.array([['.','.'],
                         ['.','.']])
     maxlags = 4 # maximum lags to be considered for common shock responses
@@ -97,8 +126,8 @@ def run_var():
                         ['.','.']])
     lr_sign = np.array([['+','.'],
                         ['.','.']])
-    maxlags = 4 # maximum lags to be considered for common shock responses
-    nsteps = 15 # desired number of steps for the impulse responses
+    maxlags = 8 # maximum lags to be considered for common shock responses
+    nsteps = 40 # desired number of steps for the impulse responses
     lagmethod = 'aic'
 
     bootstrap = True
@@ -112,5 +141,5 @@ def run_var():
     SVAR(var_input)
 
 if __name__ == "__main__":
-    run_var()
-    # run_panel()
+    # run_var()
+    run_panel()

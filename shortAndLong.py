@@ -1,12 +1,16 @@
 import numpy as np
 from scipy.optimize import minimize
 
-def shortAndLong(size, sr_constraint, lr_constraint, F1):
+def shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1):
+    if np.array_equal(Omega_mu, Omega_mu.T):
+        size = Omega_mu.shape[0]
+    else:
+        raise ValueError("Covariance matrix must be symmetrical.")
+    
     M = np.identity(size) # initialize M
-    omega = np.identity(size)
 
     # Flatten M and omega for scipy.optimize
-    m = M.T.reshape(1,-1)[0]
+    m = M.flatten()
 
     # Get 1-indexed column of a flattened matrix.
     def get_col(x, col):
@@ -15,7 +19,7 @@ def shortAndLong(size, sr_constraint, lr_constraint, F1):
     def objective_func(x):
         # The Forbenius norm of (MM'-Omega)
         recovered = x.reshape((size, size)).T
-        return np.linalg.norm(np.dot(recovered, recovered.T)-omega, 'fro')
+        return np.linalg.norm(np.dot(recovered, recovered.T)-Omega_mu, 'fro')
 
     def sr_constraint_func(x, sr_cons):
         return x[size*(sr_cons[1]-1) + sr_cons[0]-1]
@@ -27,7 +31,7 @@ def shortAndLong(size, sr_constraint, lr_constraint, F1):
     for lr_cons in lr_constraint:
         cons.append({'type':'eq', 'fun':lr_constraint_func, 'args':(lr_cons,)})
     
-    result = minimize(objective_func, M, constraints = cons)
+    result = minimize(objective_func, m, constraints = cons)
     M = result.x.reshape((size, size)).T
     # print(M)
     # print(result.message)
@@ -35,11 +39,11 @@ def shortAndLong(size, sr_constraint, lr_constraint, F1):
     return M
 
 def test():
-    size = 3
-    F1 = np.array([[1,2,3],[4,5,6],[7,8,9]])
-    sr_constraint = [(1,1)]
-    lr_constraint = [(1,2), (3,1)]
-    shortAndLong(size, sr_constraint, lr_constraint, F1)
+    Omega_mu = np.array([[0.8,0.5],[0.5,0.8]])
+    F1 = np.array([[4,5],[7,8]])
+    sr_constraint = [(1,2)]
+    lr_constraint = []
+    shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1)
 
 if __name__ == "__main__":
     test()
