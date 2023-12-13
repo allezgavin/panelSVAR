@@ -72,23 +72,28 @@ class VAR_output:
         self.ir_lower = ir_lower
         self.fevd = fevd
         
-def SVAR(input): # mutates df
+def SVAR(input):
     output = VAR_output()
-    # variable_names = [var if input.variables[var] == 0 else 'd'+var for var in input.variables.keys()]
-    variable_names = list(input.variables.keys())
 
     if len(input.td_col) > 0:
+        # Would raise error if there are duplicate times.
         input.df.set_index(input.td_col, inplace = True)
 
-    # Convert to stationary form
-    input.df = input.df[list(input.variables.keys())]
-    for var in input.variables:
-        if input.variables[var] == 1:
-            input.df[var] = np.log(input.df[var]) - np.log(input.df[var].shift(1))
-            input.variables[var] = 0
-    input.df.dropna(inplace=True)
+    variable_names = list(input.variables.keys())
+    df = input.df[variable_names]
 
-    model = VAR(input.df)
+    # Convert to stationary form
+    # This cannot be done in __init__ of VAR_input because, in a data panel, the steady-state data must be averaged first before finding the log diff.
+    def log_diff(arr):
+        log_arr = np.log(arr)
+        return log_arr - log_arr.shift(1)
+    for var in input.variables:
+        if input.variables[var][0] == 1:
+            df[var] = log_diff(df[var])
+            input.variables[var][0] = 0
+    df.dropna(inplace=True)
+    
+    model = VAR(df)
     results = model.fit(maxlags=input.maxlags, ic=input.lagmethod)
     # print(results.params) # VAR coefficients
     # print(results.sigma_u) # Covariance matrix Omega_mu
@@ -98,10 +103,9 @@ def SVAR(input): # mutates df
     if output.lag_order == 0:
         return output
     
-    # print(input.df)
     prediction = model.predict(params=results.params, lags=output.lag_order)
-    output.shock = input.df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
-    
+    output.shock = df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
+
     # Estimate impulse response, without any transformation of the shocks (FACTOR = %identity(m))
     
     irf = results.irf(input.nsteps)
@@ -150,7 +154,7 @@ def SVAR(input): # mutates df
                 shuffled_shock[j, :] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]), :]
             
             # Find impulse response, which is subject to structrual restrictions
-            boot_input.df = pd.DataFrame(columns = input.df.columns, data = prediction+shuffled_shock)
+            boot_input.df = pd.DataFrame(columns = variable_names, data = prediction+shuffled_shock)
             boot_output = SVAR(boot_input)
             if boot_output.lag_order == 0:
                 # Unsuccessful VAR. No lags selected. Treat all VMA coefs as zero.
@@ -172,11 +176,8 @@ def SVAR(input): # mutates df
 
     # Convert to impulse reponse of steady state for unit root variables
     for i, var in enumerate(variable_names):
-        if input.variables[var] == 1:
+        if input.variables[var][1] == 1:
             output.ir[:, i, :] = output.ir[:, i, :].cumsum(axis=0)
-            if input.bootstrap:
-                output.ir_lower[:, i, :] = output.ir_lower[:, i, :].cumsum(axis=0)
-                output.ir_upper[:, i, :] = output.ir_upper[:, i, :].cumsum(axis=0)
 
     # VARIANCE DECOMPOSITION NEEDS MORE WORK
     fevd = results.fevd(input.nsteps)
@@ -192,7 +193,6 @@ def SVAR(input): # mutates df
     for i in range(len(VD)):
         VD[i] /= VD[i].sum(axis=1, keepdims=True)
     # print(VD)
-
 
     if input.plot:
         plot_ir(variable_names, input.shocks, output.ir,

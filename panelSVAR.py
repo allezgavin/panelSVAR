@@ -27,12 +27,15 @@ def panelSVAR(input):
                 for sk in range(1,input.size+1) for lg in range(input.nsteps+1)] # lg(Lag) is the innermost loop
     variable_cols = list(input.variables.keys())
     
-    unit_root_var = []
-    for var in input.variables:
-        if input.variables[var] == 1:
-            input.variables[var] = 0
-            unit_root_var.append(var)
-    input.df[unit_root_var] = input.df.groupby(input.member_col)[unit_root_var].transform(lambda x : np.log(x) - np.log(x).shift(1))
+    logdiff_before_averaging = True
+
+    if logdiff_before_averaging:
+        unit_root_var = []
+        for var in input.variables:
+            if input.variables[var][0] == 1:
+                input.variables[var][0] = 0
+                unit_root_var.append(var)
+        input.df[unit_root_var] = input.df.groupby(input.member_col)[unit_root_var].transform(lambda x : np.log(x) - np.log(x).shift(1))
 
     # Initialize output spreadsheets
     comp_df = pd.DataFrame(index=members, columns=elements)
@@ -43,26 +46,31 @@ def panelSVAR(input):
     # comp_dict = dict()
 
     # Common shock
-    average_df = input.df.groupby(input.td_col)[variable_cols].mean()
-    comm_svar_input = VAR_input(input.variables, input.shocks, [], "",
-                                input.sr_constraint, input.lr_constraint, input.sr_sign, input.lr_sign,
-                                input.maxlags, input.nsteps, input.lagmethod, input.bootstrap,
-                                input.ndraws, input.signif, excel_path="", excel_sheet_name="",
-                                # This df changes
-                                df=average_df, plot=False)
-    common_output = SVAR(comm_svar_input)
+    comm_input = copy.deepcopy(input)
+    comm_input.td_col = []
+    comm_input.member_col = ""
+    # Perhaps set a threshold here instead of dropna
+    # Perhaps need to demean every country before taking average for an unbalanced panel
+    comm_input.df = input.df.groupby(input.td_col)[variable_cols].mean().dropna()
+    comm_input.plot = False
+    comm_input.bootstrap = False
+    common_output = SVAR(comm_input)
     common_shock = common_output.shock
+    if common_output.lag_order == 0:
+        raise Exception("No lags selected for common shock. Panel SVAR ends.")
 
-    # print(input.df)
     # Composite shock
     for member, member_df in input.df.groupby(input.member_col):
-        member_svar_input = VAR_input(input.variables, input.shocks, [], "",
-                                      input.sr_constraint, input.lr_constraint, input.sr_sign, input.lr_sign,
-                                      input.maxlags, input.nsteps, input.lagmethod, input.bootstrap,
-                                      input.ndraws, input.signif, excel_path="", excel_sheet_name="",
-                                      # This df changes
-                                      df=member_df.set_index(input.td_col)[variable_cols], plot=False)
-        member_output = SVAR(member_svar_input)
+        member_input = copy.deepcopy(input)
+        member_input.td_col = []
+        member_input.member_col = ""
+        member_input.df = member_df.set_index(input.td_col)[variable_cols].dropna()
+        member_input.plot = False
+        member_input.bootstrap = False
+        member_output = SVAR(member_input)
+        if member_output.lag_order == 0:
+            print("No lags selected for ", member, ".")
+            continue
 
         composite_shock = member_output.shock
         # Merge with the common shock on index (td)

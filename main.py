@@ -50,8 +50,8 @@ def run_panel():
     excel_sheet_name = "Panel6_comm_all"
     variables = {
         # 1 for unit root, 0 for stationary
-        'CommodityIndex' : 1,
-        'Yreal' : 1,
+        'CommodityIndex' : [1, 1],
+        'Yreal' : [1, 1]
     }
     shocks = ['Real', 'Nominal']
     td_col = ["time"]
@@ -77,7 +77,7 @@ def run_panel():
     panelSVAR(panel_input)
 
 def run_var():
-    
+    """
     # EXAMPLE IMPUT BELOW
     plot = True
     savefig_path = ""
@@ -85,10 +85,9 @@ def run_var():
     excel_sheet_name = "Panel6_comm_all"
     variables = {
         # 1 for unit root, 0 for stationary
-        'Yreal' : 1,
-        # 'Govnom' : 1,
-        'CPI' : 1,
-        # 'G': 1
+        # First element in list for data input, second for output
+        'Yreal' : [1, 1], # input in unit root form, output in unit root (steady-state) form
+        'CPI' : [1, 0] # input in unit root form, output in stationary form (inflation rate)
     }
     shocks = ['AS', 'AD']
     td_col = ""
@@ -104,10 +103,10 @@ def run_var():
     lagmethod = 'aic'
 
     bootstrap = True
-    ndraws = 2000
+    ndraws = 200
     signif = 0.05 # significance level of bootstrap
-    
     """
+    
     # INPUT SECTION
     plot = True
     savefig_path = ""
@@ -115,8 +114,8 @@ def run_var():
     excel_sheet_name = "econ471-bqdata"
     variables = {
         # 1 for unit root, 0 for stationary
-        'dGDPADJUST' : 0,
-        'URADJUST' : 0
+        'dGDPADJUST' : [0, 1],
+        'URADJUST' : [0, 0]
     }
     shocks = ['AS', 'AD']
     td_col = ""
@@ -128,13 +127,13 @@ def run_var():
     lr_sign = np.array([['+','.'],
                         ['.','.']])
     maxlags = 8 # maximum lags to be considered for common shock responses
-    nsteps = 40 # desired number of steps for the impulse responses
+    nsteps = 20 # desired number of steps for the impulse responses
     lagmethod = 'aic'
 
     bootstrap = True
-    ndraws = 20
-    signif = 0.05 # significance level of bootstrap
-    """
+    ndraws = 200
+    signif = 0.32 # significance level of bootstrap
+    
     """
     # INPUT SECTION
     plot = True
@@ -145,8 +144,8 @@ def run_var():
     df = df.loc[df['country']==112]
     variables = {
         # 1 for unit root, 0 for stationary
-        'rf' : 1,
-        'ae' : 1
+        'rf' : [1, 1]
+        'ae' : [1, 1]
     }
     shocks = ['real', 'nom']
     td_col = ""
@@ -174,5 +173,5 @@ def run_var():
     # print(output.ir)
 
 if __name__ == "__main__":
-    run_var()
-    # run_panel()
+    # run_var()
+    run_panel()
