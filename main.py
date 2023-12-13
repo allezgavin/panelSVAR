@@ -131,7 +131,7 @@ def run_var():
     lagmethod = 'aic'
 
     bootstrap = True
-    ndraws = 200
+    ndraws = 2000
     signif = 0.32 # significance level of bootstrap
     
     """
@@ -173,5 +173,5 @@ def run_var():
     # print(output.ir)
 
 if __name__ == "__main__":
-    # run_var()
-    run_panel()
+    run_var()
+    # run_panel()

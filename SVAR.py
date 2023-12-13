@@ -6,7 +6,7 @@ from plotting import plot_ir
 from shortAndLong import shortAndLong
 import copy
 from scipy import stats
-
+    
 # Encapsulation of input to provide default values and keep modularity
 class VAR_input:
     __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
@@ -139,8 +139,17 @@ def SVAR(input):
     
     if input.bootstrap:
         print("Bootstrapping in progress...")
-        # This algo uses lots of memory. Potential optimization.
-        IRs = np.empty((input.ndraws, input.nsteps+1, input.size, input.size)) # All zeros
+        normal_interval = False
+        draw_from_normal = True
+        
+        # Initialize output storage
+        if normal_interval:
+            mean_accum = np.zeros_like(output.ir)
+            sq_diff_accum = np.zeros_like(output.ir)
+        if not normal_interval:
+            # This uses too much memory when dataset is large
+            IRs = np.zeros((input.ndraws, input.nsteps+1, input.size, input.size))
+
         for i in range(input.ndraws):
             # Initialize input object
             boot_input = copy.deepcopy(input)
@@ -148,27 +157,42 @@ def SVAR(input):
             boot_input.plot = False
             boot_input.td_col = ""
 
-            # Draw randomly with replacement
-            shuffled_shock = np.empty_like(output.shock)
-            for j in range(shuffled_shock.shape[0]):
-                shuffled_shock[j, :] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]), :]
+            if draw_from_normal:
+                shuffled_shock = np.random.multivariate_normal(np.array([0,0]), results.sigma_u, output.shock.shape[0])
+            else:
+                # Draw randomly with replacement
+                shuffled_shock = np.empty_like(output.shock)
+                for j in range(shuffled_shock.shape[0]):
+                    shuffled_shock[j, :] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]), :]
             
-            # Find impulse response, which is subject to structrual restrictions
+            # Find impulse response subject to structrual restrictions
             boot_input.df = pd.DataFrame(columns = variable_names, data = prediction+shuffled_shock)
             boot_output = SVAR(boot_input)
             if boot_output.lag_order == 0:
                 # Unsuccessful VAR. No lags selected. Treat all VMA coefs as zero.
                 continue
-            IRs[i, :, :, :] = boot_output.ir
+
+            if normal_interval:
+                mean_accum += boot_output.ir
+                sq_diff_accum += boot_output.ir ** 2
+            else:
+                IRs[i, :, :, :] = boot_output.ir
             
-        # Sort boot_output.ir and find thresholds
-        output.ir_lower = np.empty_like(output.ir)
-        output.ir_upper = np.empty_like(output.ir)
-        for lg in range(input.nsteps+1):
-            for vr in range(input.size):
-                for sk in range(input.size):
-                    output.ir_lower[lg, vr, sk], output.ir_upper[lg, vr, sk] = stats.mstats.mquantiles(
-                        IRs[:, lg, vr, sk], [input.signif / 2, 1 - input.signif / 2])
+        if normal_interval:
+            boot_mean = mean_accum / input.ndraws
+            boot_std = np.sqrt(sq_diff_accum / input.ndraws - boot_mean ** 2)
+            z_score = stats.norm.ppf(1 - input.signif / 2)
+            output.ir_lower = boot_mean - z_score * boot_std
+            output.ir_upper = boot_mean + z_score * boot_std
+        else:
+            # Sort boot_output.ir in IRs and find thresholds
+            output.ir_lower = np.empty_like(output.ir)
+            output.ir_upper = np.empty_like(output.ir)
+            for lg in range(input.nsteps+1):
+                for vr in range(input.size):
+                    for sk in range(input.size):
+                        output.ir_lower[lg, vr, sk], output.ir_upper[lg, vr, sk] = stats.mstats.mquantiles(
+                            IRs[:, lg, vr, sk], [input.signif / 2, 1 - input.signif / 2])
                     
 
     for i in range(len(output.shock)):

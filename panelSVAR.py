@@ -27,6 +27,7 @@ def panelSVAR(input):
                 for sk in range(1,input.size+1) for lg in range(input.nsteps+1)] # lg(Lag) is the innermost loop
     variable_cols = list(input.variables.keys())
     
+    # Must set to true for unnormalized/weighted unit root data
     logdiff_before_averaging = True
 
     if logdiff_before_averaging:
