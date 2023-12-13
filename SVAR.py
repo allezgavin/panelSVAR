@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from statsmodels.tsa.api import VAR
 from plotting import plot_ir
 from shortAndLong import shortAndLong
+import copy
+from scipy import stats
 
 # Encapsulation of input to provide default values and keep modularity
 class VAR_input:
@@ -70,7 +72,7 @@ class VAR_output:
         self.ir_lower = ir_lower
         self.fevd = fevd
         
-def SVAR(input): # possible mutation of input.df
+def SVAR(input): # mutates df
     output = VAR_output()
     # variable_names = [var if input.variables[var] == 0 else 'd'+var for var in input.variables.keys()]
     variable_names = list(input.variables.keys())
@@ -83,20 +85,29 @@ def SVAR(input): # possible mutation of input.df
     for var in input.variables:
         if input.variables[var] == 1:
             input.df[var] = np.log(input.df[var]) - np.log(input.df[var].shift(1))
-    input.df.dropna(inplace = True)
+            input.variables[var] = 0
+    input.df.dropna(inplace=True)
 
     model = VAR(input.df)
     results = model.fit(maxlags=input.maxlags, ic=input.lagmethod)
     # print(results.params) # VAR coefficients
     # print(results.sigma_u) # Covariance matrix Omega_mu
+
+    # Cannot invert to VMA form if no lags selected
     output.lag_order = results.k_ar
+    if output.lag_order == 0:
+        return output
+    
     # print(input.df)
     prediction = model.predict(params=results.params, lags=output.lag_order)
     output.shock = input.df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
     
     # Estimate impulse response, without any transformation of the shocks (FACTOR = %identity(m))
+    
     irf = results.irf(input.nsteps)
     # print(irf.irfs)
+
+
 
     # Calculate decomposition matrix M
     F1 = np.zeros((input.size, input.size))
@@ -121,26 +132,51 @@ def SVAR(input): # possible mutation of input.df
     for i in range(input.nsteps+1):
         output.ir[i] = np.dot(output.ir[i], M)
     
+    
+    if input.bootstrap:
+        print("Bootstrapping in progress...")
+        # This algo uses lots of memory. Potential optimization.
+        IRs = np.empty((input.ndraws, input.nsteps+1, input.size, input.size)) # All zeros
+        for i in range(input.ndraws):
+            # Initialize input object
+            boot_input = copy.deepcopy(input)
+            boot_input.bootstrap = False
+            boot_input.plot = False
+            boot_input.td_col = ""
+
+            # Draw randomly with replacement
+            shuffled_shock = np.empty_like(output.shock)
+            for j in range(shuffled_shock.shape[0]):
+                shuffled_shock[j, :] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]), :]
+            
+            # Find impulse response, which is subject to structrual restrictions
+            boot_input.df = pd.DataFrame(columns = input.df.columns, data = prediction+shuffled_shock)
+            boot_output = SVAR(boot_input)
+            if boot_output.lag_order == 0:
+                # Unsuccessful VAR. No lags selected. Treat all VMA coefs as zero.
+                continue
+            IRs[i, :, :, :] = boot_output.ir
+            
+        # Sort boot_output.ir and find thresholds
+        output.ir_lower = np.empty_like(output.ir)
+        output.ir_upper = np.empty_like(output.ir)
+        for lg in range(input.nsteps+1):
+            for vr in range(input.size):
+                for sk in range(input.size):
+                    output.ir_lower[lg, vr, sk], output.ir_upper[lg, vr, sk] = stats.mstats.mquantiles(
+                        IRs[:, lg, vr, sk], [input.signif / 2, 1 - input.signif / 2])
+                    
+
     for i in range(len(output.shock)):
         output.shock.iloc[i, :] = np.dot(np.linalg.inv(M), output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
 
-    if input.bootstrap:
-        errband = np.asarray(irf.errband_mc(repl=input.ndraws, signif=input.signif))
-        # errband[0] is lower band and errband[1] is upper band
-        for j in [0, 1]:
-            for i in range(input.nsteps+1):
-                errband[j, i] = np.dot(errband[j, i], M)
-        output.ir_lower = errband[0]
-        output.ir_upper = errband[1]
-
-    # # Convert to impulse reponse of steady state for unit root variables
-    # # The bootstrapping results don't make sens now
-    # for i, var in enumerate(variable_names):
-    #     if input.variables[var] == 1:
-    #         output.ir[:, i, :] = output.ir[:, i, :].cumsum(axis=0)
-    #         if input.bootstrap:
-    #             output.ir_lower[:, i, :] = output.ir_lower[:, i, :].cumsum(axis=0)
-    #             output.ir_upper[:, i, :] = output.ir_upper[:, i, :].cumsum(axis=0)
+    # Convert to impulse reponse of steady state for unit root variables
+    for i, var in enumerate(variable_names):
+        if input.variables[var] == 1:
+            output.ir[:, i, :] = output.ir[:, i, :].cumsum(axis=0)
+            if input.bootstrap:
+                output.ir_lower[:, i, :] = output.ir_lower[:, i, :].cumsum(axis=0)
+                output.ir_upper[:, i, :] = output.ir_upper[:, i, :].cumsum(axis=0)
 
     # VARIANCE DECOMPOSITION NEEDS MORE WORK
     fevd = results.fevd(input.nsteps)
@@ -156,10 +192,6 @@ def SVAR(input): # possible mutation of input.df
     for i in range(len(VD)):
         VD[i] /= VD[i].sum(axis=1, keepdims=True)
     # print(VD)
-
-
-
-
 
 
     if input.plot:

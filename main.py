@@ -106,8 +106,8 @@ def run_var():
     bootstrap = True
     ndraws = 2000
     signif = 0.05 # significance level of bootstrap
-    """
     
+    """
     # INPUT SECTION
     plot = True
     savefig_path = ""
@@ -132,10 +132,10 @@ def run_var():
     lagmethod = 'aic'
 
     bootstrap = True
-    ndraws = 2000
+    ndraws = 20
     signif = 0.05 # significance level of bootstrap
-    
-    
+    """
+    """
     # INPUT SECTION
     plot = True
     savefig_path = ""
@@ -174,5 +174,5 @@ def run_var():
     # print(output.ir)
 
 if __name__ == "__main__":
-    # run_var()
-    run_panel()
+    run_var()
+    # run_panel()
