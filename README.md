@@ -7,5 +7,5 @@ Code still in development. Use for ECON 371 only (for now).
 Do NOT try to crash the code! I have not implemented much error handling.
 Incorrect input could lead to incorrect output.
 
-Your contribution is much appreciated!
-Please contact Gavin Xia at gx1@williams.edu for to make contributions or use the code for projects.
+Your contribution is much appreciated! Feel free to fork a branch and make improvements.
+Please contact Gavin Xia at gx1@williams.edu to make contributions or use the code for projects.
