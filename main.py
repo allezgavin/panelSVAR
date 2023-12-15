@@ -131,7 +131,7 @@ def run_var():
     lagmethod = 'aic'
 
     bootstrap = True
-    ndraws = 2000
+    ndraws = 200
     signif = 0.32 # significance level of bootstrap
     
     """

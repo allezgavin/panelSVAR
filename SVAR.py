@@ -26,7 +26,7 @@ class VAR_input:
                 self.df = df.copy()
             else:
                 raise ValueError("Empty input data.")
-        
+        self.df.dropna(how='all', inplace=True)
         self.variables = variables
         self.shocks = shocks
         self.size = len(self.variables)
@@ -107,7 +107,6 @@ def SVAR(input):
     output.shock = df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
 
     # Estimate impulse response, without any transformation of the shocks (FACTOR = %identity(m))
-    
     irf = results.irf(input.nsteps)
     # print(irf.irfs)
 
@@ -141,7 +140,10 @@ def SVAR(input):
         print("Bootstrapping in progress...")
         normal_interval = False
         draw_from_normal = True
-        
+        burn = 20
+        sim = model.predict(params=results.params, end=burn+len(input.df)-1, lags=output.lag_order)
+        print(sim)
+        sim = sim[burn:, :]
         # Initialize output storage
         if normal_interval:
             mean_accum = np.zeros_like(output.ir)
@@ -161,12 +163,12 @@ def SVAR(input):
                 shuffled_shock = np.random.multivariate_normal(np.array([0,0]), results.sigma_u, output.shock.shape[0])
             else:
                 # Draw randomly with replacement
-                shuffled_shock = np.empty_like(output.shock)
+                shuffled_shock = np.zeros((output.shock.shape[0], input.size))
                 for j in range(shuffled_shock.shape[0]):
                     shuffled_shock[j, :] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]), :]
             
             # Find impulse response subject to structrual restrictions
-            boot_input.df = pd.DataFrame(columns = variable_names, data = prediction+shuffled_shock)
+            boot_input.df = pd.DataFrame(columns = variable_names, data = sim+shuffled_shock)
             boot_output = SVAR(boot_input)
             if boot_output.lag_order == 0:
                 # Unsuccessful VAR. No lags selected. Treat all VMA coefs as zero.
