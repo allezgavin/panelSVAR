@@ -150,7 +150,7 @@ def SVAR(input):
         print("Bootstrapping in progress...")
         normal_interval = False
         draw_from_normal = False
-        burn = 10
+        burn = 100
         
         # Initialize output storage
         if normal_interval:
@@ -175,10 +175,13 @@ def SVAR(input):
                 for j in range(shuffled_shock.shape[0]):
                     shuffled_shock[j] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]-1)]
             
+            shuffled_shock = shuffled_shock / 1
+
             # Generate bootstrap data
             drop_const = True
 
             initial_cond = np.zeros((output.lag_order, input.size))
+            initial_cond = df.iloc[output.lag_order:]
             boot_input.df = pd.DataFrame(columns = variable_names, data = np.concatenate((initial_cond, shuffled_shock), axis=0))
 
             coefs = np.array(results.params.iloc[1:])
@@ -191,7 +194,7 @@ def SVAR(input):
                 boot_input.df.iloc[p] += VAR_predict(boot_input.df.iloc[p-output.lag_order : p], coefs, const)
 
             boot_input.df = boot_input.df.iloc[burn:]
-
+            
             # Find impulse response subject to structrual restrictions
             
             boot_output = SVAR(boot_input)

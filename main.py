@@ -132,7 +132,7 @@ def run_var():
 
     bootstrap = True
     ndraws = 200
-    signif = 0.05 # significance level of bootstrap
+    signif = 0.32 # significance level of bootstrap
     
     """
     # INPUT SECTION
