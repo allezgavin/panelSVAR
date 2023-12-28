@@ -71,7 +71,20 @@ class VAR_output:
         self.ir_upper = ir_upper
         self.ir_lower = ir_lower
         self.fevd = fevd
-        
+
+def VAR_predict(var_df, coefs, const):
+    size = var_df.shape[1]
+    order = var_df.shape[0]
+    try:
+        coefs = np.reshape(coefs, (order, size, size))
+    except:
+        raise ValueError("Invalid input.")
+
+    output = const.copy()
+    for l in range(order):
+        output += np.dot(coefs[l], var_df.iloc[order-1-l])
+    return output
+
 def SVAR(input):
     output = VAR_output()
 
@@ -107,11 +120,8 @@ def SVAR(input):
     output.shock = df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
 
     # Estimate impulse response, without any transformation of the shocks (FACTOR = %identity(m))
-    
     irf = results.irf(input.nsteps)
     # print(irf.irfs)
-
-
 
     # Calculate decomposition matrix M
     F1 = np.zeros((input.size, input.size))
@@ -136,11 +146,11 @@ def SVAR(input):
     for i in range(input.nsteps+1):
         output.ir[i] = np.dot(output.ir[i], M)
     
-    
     if input.bootstrap:
         print("Bootstrapping in progress...")
         normal_interval = False
-        draw_from_normal = True
+        draw_from_normal = False
+        burn = 10
         
         # Initialize output storage
         if normal_interval:
@@ -157,16 +167,33 @@ def SVAR(input):
             boot_input.plot = False
             boot_input.td_col = ""
 
+            shuffled_shock = np.zeros((output.shock.shape[0]+burn, input.size))
             if draw_from_normal:
-                shuffled_shock = np.random.multivariate_normal(np.array([0,0]), results.sigma_u, output.shock.shape[0])
+                shuffled_shock = np.random.multivariate_normal(np.array([0,0]), results.sigma_u, shuffled_shock.shape[0])
             else:
                 # Draw randomly with replacement
-                shuffled_shock = np.empty_like(output.shock)
                 for j in range(shuffled_shock.shape[0]):
-                    shuffled_shock[j, :] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]), :]
+                    shuffled_shock[j] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]-1)]
             
+            # Generate bootstrap data
+            drop_const = True
+
+            initial_cond = np.zeros((output.lag_order, input.size))
+            boot_input.df = pd.DataFrame(columns = variable_names, data = np.concatenate((initial_cond, shuffled_shock), axis=0))
+
+            coefs = np.array(results.params.iloc[1:])
+            const = np.zeros(input.size)
+
+            if not drop_const:
+                const = np.array(results.params.iloc[0])
+
+            for p in range(output.lag_order, boot_input.df.shape[0]):
+                boot_input.df.iloc[p] += VAR_predict(boot_input.df.iloc[p-output.lag_order : p], coefs, const)
+
+            boot_input.df = boot_input.df.iloc[burn:]
+
             # Find impulse response subject to structrual restrictions
-            boot_input.df = pd.DataFrame(columns = variable_names, data = prediction+shuffled_shock)
+            
             boot_output = SVAR(boot_input)
             if boot_output.lag_order == 0:
                 # Unsuccessful VAR. No lags selected. Treat all VMA coefs as zero.
@@ -176,7 +203,7 @@ def SVAR(input):
                 mean_accum += boot_output.ir
                 sq_diff_accum += boot_output.ir ** 2
             else:
-                IRs[i, :, :, :] = boot_output.ir
+                IRs[i] = boot_output.ir
             
         if normal_interval:
             boot_mean = mean_accum / input.ndraws
