@@ -13,37 +13,7 @@ Please contact Gavin Xia at gx1@williams.edu for to make contributions or use th
 from SVAR import *
 from panelSVAR import *
 
-def run_panel():
-    
-    # EXAMPLE INPUT BELOW
-    """
-    plot = False
-    savefig_path = ""
-    excel_path = "pedroni_ppp.xls"
-    excel_sheet_name = "Sheet1"
-    variables = {
-        # 1 for unit root, 0 for stationary
-        'rf' : 1,
-        'ae' : 1,
-    }
-    shocks = ['real', 'nominal']
-    td_col = ["Year", "Month"]
-    member_col = "country"
-    sr_constraint = []
-    lr_constraint = [(1,2)]
-    sr_sign = np.array([['+','.'],
-                        ['.','+']])
-    lr_sign = np.array([['.','.'],
-                        ['.','.']])
-    maxlags = 4 # maximum lags to be considered for common shock responses
-    nsteps = 36   # desired number of steps for the impulse responses
-    lagmethod = 'aic'
-
-    bootstrap = False
-    ndraws = 2000
-    signif = 0.05 # significance level of bootstrap
-    """
-    
+def run_panel_test():
     plot = False
     savefig_path = ""
     excel_path = "test-run.xls"
@@ -71,9 +41,71 @@ def run_panel():
     signif = 0.05 # significance level of bootstrap
     
     # Run VAR
-    panel_input = VAR_input(variables, shocks, td_col, member_col, sr_constraint, lr_constraint,
-                          sr_sign, lr_sign, maxlags, nsteps, lagmethod, bootstrap, ndraws, signif,
-                          excel_path, excel_sheet_name, pd.DataFrame(), plot, savefig_path)
+    panel_input = VAR_input(variables=variables, shocks=shocks, td_col=td_col, member_col=member_col, M=None,
+                sr_constraint=sr_constraint, lr_constraint=lr_constraint, sr_sign=sr_sign, lr_sign=lr_sign,
+                maxlags=maxlags, nsteps=nsteps, lagmethod=lagmethod, bootstrap=bootstrap, ndraws=ndraws, signif=signif,
+                excel_path=excel_path, excel_sheet_name=excel_sheet_name, df=pd.DataFrame(), plot=plot, savefig_path=savefig_path)
+    panelSVAR(panel_input)
+
+def run_panel_ppp():
+    """
+    plot = False
+    savefig_path = ""
+    excel_path = "pedroni_ppp.xls"
+    excel_sheet_name = "Sheet1"
+    variables = {
+        # 1 for unit root, 0 for stationary
+        'rf' : [1, 1],
+        'ae' : [1, 1],
+    }
+    shocks = ['real', 'nominal']
+    td_col = ["Year", "Month"]
+    member_col = "country"
+    sr_constraint = []
+    lr_constraint = [(1,2)]
+    sr_sign = np.array([['+','.'],
+                        ['.','+']])
+    lr_sign = np.array([['.','.'],
+                        ['.','.']])
+    maxlags = 4 # maximum lags to be considered for common shock responses
+    nsteps = 36   # desired number of steps for the impulse responses
+    lagmethod = 'aic'
+
+    bootstrap = False
+    ndraws = 2000
+    signif = 0.05 # significance level of bootstrap
+    """
+
+    plot = False
+    savefig_path = ""
+    excel_path = "pedroni_ppp.xls"
+    excel_sheet_name = "Sheet1"
+    variables = {
+        # 1 for unit root, 0 for stationary
+        'Ereal' : [1, 1],
+        'cpi' : [1, 1],
+        'ae' : [1, 1]
+    }
+    shocks = ['e1', 'e2', 'e3']
+    td_col = ["Year", "Month"]
+    member_col = "country"
+    sr_constraint = []
+    lr_constraint = [(1,2),(1,3),(2,3)]
+    sr_sign = np.array([['.' for j in range(3)] for i in range(3)])
+    lr_sign = sr_sign
+    maxlags = 4 # maximum lags to be considered for common shock responses
+    nsteps = 36   # desired number of steps for the impulse responses
+    lagmethod = 'aic'
+
+    bootstrap = False
+    ndraws = 2000
+    signif = 0.05 # significance level of bootstrap
+    
+    # Run VAR
+    panel_input = VAR_input(variables=variables, shocks=shocks, td_col=td_col, member_col=member_col, M=None,
+                sr_constraint=sr_constraint, lr_constraint=lr_constraint, sr_sign=sr_sign, lr_sign=lr_sign,
+                maxlags=maxlags, nsteps=nsteps, lagmethod=lagmethod, bootstrap=bootstrap, ndraws=ndraws, signif=signif,
+                excel_path=excel_path, excel_sheet_name=excel_sheet_name, df=pd.DataFrame(), plot=plot, savefig_path=savefig_path)
     panelSVAR(panel_input)
 
 def run_var():
@@ -166,12 +198,14 @@ def run_var():
     """
 
     # Run VAR
-    var_input = VAR_input(variables, shocks, td_col, member_col, sr_constraint, lr_constraint,
-                          sr_sign, lr_sign, maxlags, nsteps, lagmethod, bootstrap, ndraws, signif,
-                          excel_path, excel_sheet_name, pd.DataFrame(), plot, savefig_path)
+    var_input = VAR_input(variables=variables, shocks=shocks, td_col=td_col, member_col=member_col, M=None,
+                          sr_constraint=sr_constraint, lr_constraint=lr_constraint, sr_sign=sr_sign, lr_sign=lr_sign,
+                        maxlags=maxlags, nsteps=nsteps, lagmethod=lagmethod, bootstrap=bootstrap, ndraws=ndraws, signif=signif,
+                        excel_path=excel_path, excel_sheet_name=excel_sheet_name, df=pd.DataFrame(), plot=plot, savefig_path=savefig_path)
     output = SVAR(var_input)
     # print(output.ir)
 
 if __name__ == "__main__":
-    run_var()
-    # run_panel()
+    # run_var()
+    # run_panel_test()
+    run_panel_ppp()

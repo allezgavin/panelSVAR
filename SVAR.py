@@ -9,10 +9,10 @@ from scipy import stats
     
 # Encapsulation of input to provide default values and keep modularity
 class VAR_input:
-    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
+    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'M', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     
-    def __init__(self, variables, shocks, td_col=[], member_col="", sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
+    def __init__(self, variables, shocks, td_col=[], member_col="", M=None, sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
                  maxlags=5, nsteps=12, lagmethod='aic', bootstrap=True, ndraws=2000, signif=0.05,
                  excel_path="", excel_sheet_name="", df=pd.DataFrame(), plot=True, savefig_path=""):
         # Build input dataframe
@@ -40,6 +40,7 @@ class VAR_input:
             self.df.sort_values(by=td_col, inplace=True)
         self.member_col = member_col
         
+        self.M = M
         self.sr_constraint = sr_constraint
         self.lr_constraint = lr_constraint
 
@@ -80,9 +81,12 @@ def VAR_predict(var_df, coefs, const):
     except:
         raise ValueError("Invalid input.")
 
+    # print(coefs)
+    # raise Exception
+
     output = const.copy()
     for l in range(order):
-        output += np.dot(coefs[l], var_df.iloc[order-1-l])
+        output += np.dot(var_df.iloc[order-1-l], coefs[l])
     return output
 
 def SVAR(input):
@@ -123,28 +127,29 @@ def SVAR(input):
     irf = results.irf(input.nsteps)
     # print(irf.irfs)
 
+    if input.M is None:
     # Calculate decomposition matrix M
-    F1 = np.zeros((input.size, input.size))
-    for f in irf.irfs:
-        F1 += f
-    M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
-    A1 = np.dot(F1, M)
-    # Sign constraint
-    signmat = np.identity(input.size)
-    for i in range(input.size):
-        for j in range(input.size):
-            switch_sign = ((input.sr_sign[i, j] == '+' and M[i,j] < 0)
-                           or (input.sr_sign[i, j] == '-' and M[i,j] > 0)
-                           or (input.lr_sign[i, j] == '+' and A1[i,j] < 0)
-                           or (input.lr_sign[i, j] == '-' and A1[i,j] > 0))
-            if switch_sign:
-                signmat[j, j] = -1
-    M = np.dot(M, signmat)
-    # print(M) # The M, or A0 matrix
+        F1 = np.zeros((input.size, input.size))
+        for f in irf.irfs:
+            F1 += f
+        input.M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
+        A1 = np.dot(F1, input.M)
+        # Sign constraint
+        signmat = np.identity(input.size)
+        for i in range(input.size):
+            for j in range(input.size):
+                switch_sign = ((input.sr_sign[i, j] == '+' and input.M[i,j] < 0)
+                            or (input.sr_sign[i, j] == '-' and input.M[i,j] > 0)
+                            or (input.lr_sign[i, j] == '+' and A1[i,j] < 0)
+                            or (input.lr_sign[i, j] == '-' and A1[i,j] > 0))
+                if switch_sign:
+                    signmat[j, j] = -1
+        input.M = np.dot(input.M, signmat)
+        # print(M)
 
     output.ir = irf.irfs
     for i in range(input.nsteps+1):
-        output.ir[i] = np.dot(output.ir[i], M)
+        output.ir[i] = np.dot(output.ir[i], input.M)
     
     if input.bootstrap:
         print("Bootstrapping in progress...")
@@ -194,7 +199,7 @@ def SVAR(input):
                 boot_input.df.iloc[p] += VAR_predict(boot_input.df.iloc[p-output.lag_order : p], coefs, const)
 
             boot_input.df = boot_input.df.iloc[burn:]
-            
+
             # Find impulse response subject to structrual restrictions
             
             boot_output = SVAR(boot_input)
@@ -226,7 +231,7 @@ def SVAR(input):
                     
 
     for i in range(len(output.shock)):
-        output.shock.iloc[i, :] = np.dot(np.linalg.inv(M), output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
+        output.shock.iloc[i, :] = np.dot(np.linalg.inv(input.M), output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
 
     # Convert to impulse reponse of steady state for unit root variables
     for i, var in enumerate(variable_names):
