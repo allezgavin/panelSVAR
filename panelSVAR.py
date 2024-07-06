@@ -15,7 +15,6 @@ class Panel_output:
         self.lambda_df = lambda_df
 
 def panelSVAR(input):
-    print(input.df.head())
     # Process input dataframe
     if len(input.td_col) == 0:
         raise ValueError("Must include time column for panel data.")
@@ -63,10 +62,13 @@ def panelSVAR(input):
     if common_output.lag_order == 0:
         raise Exception("No lags selected for common shock. Panel SVAR ends.")
     
+    common_rotation_mat = False
     # Composite shock
     for member, member_df in input.df.groupby(input.member_col):
         member_input = copy.deepcopy(input)
-        member_input.M = comm_input.M
+        
+        if common_rotation_mat:
+            member_input.M = comm_input.M
         
         member_input.td_col = []
         member_input.member_col = ""
@@ -88,7 +90,7 @@ def panelSVAR(input):
             y = merged_df.iloc[:, i]
             x = merged_df.iloc[:, input.size+i]
             linear = linregress(x, y)
-            
+
             Lambda[i, i] = linear.slope
             # 95% confidence band width = linear.stderr * 2
         

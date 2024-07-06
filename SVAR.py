@@ -44,14 +44,19 @@ class VAR_input:
         self.sr_constraint = sr_constraint
         self.lr_constraint = lr_constraint
 
-        if len(sr_sign) > 0:
+        if len(sr_sign) == 0:
+            sr_sign = np.full((self.size, self.size), '.')
+        else:
+            if sr_sign.shape != (self.size, self.size):
+                raise ValueError("Incorrect dimensions for short-run sign restrictions.")
             self.sr_sign = sr_sign
+        
+        if len(lr_sign) == 0:
+            lr_sign = np.full((self.size, self.size), '.')
         else:
-            sr_sign = np.asarray([['.' for i in range(self.size)] for j in range(self.size)])
-        if len(lr_sign) > 0:
+            if lr_sign.shape != (self.size, self.size):
+                raise ValueError("Incorrect dimensions for long-run sign restrictions.")
             self.lr_sign = lr_sign
-        else:
-            self.lr_sign = np.asarray([['.' for i in range(self.size)] for j in range(self.size)])
 
         self.maxlags = maxlags
         self.nsteps = nsteps
@@ -134,18 +139,28 @@ def SVAR(input):
             F1 += f
         input.M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
         A1 = np.dot(F1, input.M)
+
         # Sign constraint
-        signmat = np.identity(input.size)
-        for i in range(input.size):
-            for j in range(input.size):
-                switch_sign = ((input.sr_sign[i, j] == '+' and input.M[i,j] < 0)
-                            or (input.sr_sign[i, j] == '-' and input.M[i,j] > 0)
-                            or (input.lr_sign[i, j] == '+' and A1[i,j] < 0)
-                            or (input.lr_sign[i, j] == '-' and A1[i,j] > 0))
-                if switch_sign:
-                    signmat[j, j] = -1
-        input.M = np.dot(input.M, signmat)
-        # print(M)
+        if not np.all(np.sum((input.sr_sign == '+') | (input.sr_sign == '-'), axis = 0)
+                      + np.sum((input.lr_sign == '+') | (input.lr_sign == '-'), axis = 0) == 1):
+            raise ValueError("Each column must have exactly one sign restriction.")
+
+        flip_col = (np.sum((input.sr_sign!='.') & np.logical_xor(input.M<0, input.sr_sign=='-'),
+                          axis=0) | np.sum((input.lr_sign!='.') & np.logical_xor(A1<0, input.lr_sign=='-'), axis=0)).astype(int)
+        input.M = np.dot(input.M, np.diag(1-flip_col*2)) # 1(flip) -> -1, 0(don't flip) -> 1
+        
+        # signmat = np.identity(input.size)
+        # for i in range(input.size):
+        #     for j in range(input.size):
+        #         switch_sign = ((input.sr_sign[i, j] == '+' and input.M[i,j] < 0)
+        #                     or (input.sr_sign[i, j] == '-' and input.M[i,j] > 0)
+        #                     or (input.lr_sign[i, j] == '+' and A1[i,j] < 0)
+        #                     or (input.lr_sign[i, j] == '-' and A1[i,j] > 0))
+        #         if switch_sign:
+        #             signmat[j, j] = -1
+        # input.M = np.dot(input.M, signmat)
+
+    print("Transformation matrix M:\n", input.M)
 
     output.ir = irf.irfs
     for i in range(input.nsteps+1):

@@ -34,8 +34,8 @@ def shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1):
     result = minimize(objective_func, m, constraints = cons)
     M = result.x.reshape((size, size)).T
     
-    print(M)
-    print(result.message)
+    # print(M)
+    # print(result.message)
 
     return M
 
