@@ -48,7 +48,7 @@ def run_panel_test():
     panelSVAR(panel_input)
 
 def run_panel_ppp():
-    """
+    
     plot = False
     savefig_path = ""
     excel_path = "pedroni_ppp.xls"
@@ -67,39 +67,39 @@ def run_panel_ppp():
                         ['.','+']])
     lr_sign = np.array([['.','.'],
                         ['.','.']])
-    maxlags = 4 # maximum lags to be considered for common shock responses
-    nsteps = 36   # desired number of steps for the impulse responses
+    maxlags = 18 # maximum lags to be considered for common shock responses
+    nsteps = 20   # desired number of steps for the impulse responses
     lagmethod = 'aic'
 
     bootstrap = False
     ndraws = 2000
     signif = 0.05 # significance level of bootstrap
-    """
+    
 
-    plot = False
-    savefig_path = ""
-    excel_path = "pedroni_ppp.xls"
-    excel_sheet_name = "Sheet1"
-    variables = {
-        # 1 for unit root, 0 for stationary
-        'Ereal' : [1, 1],
-        'cpi' : [1, 1],
-        'ae' : [1, 1]
-    }
-    shocks = ['e1', 'e2', 'e3']
-    td_col = ["Year", "Month"]
-    member_col = "country"
-    sr_constraint = []
-    lr_constraint = [(1,2),(1,3),(2,3)]
-    sr_sign = np.array([['.' for j in range(3)] for i in range(3)])
-    lr_sign = sr_sign
-    maxlags = 4 # maximum lags to be considered for common shock responses
-    nsteps = 36   # desired number of steps for the impulse responses
-    lagmethod = 'aic'
+    # plot = False
+    # savefig_path = ""
+    # excel_path = "pedroni_ppp.xls"
+    # excel_sheet_name = "Sheet1"
+    # variables = {
+    #     # 1 for unit root, 0 for stationary
+    #     'Ereal' : [1, 1],
+    #     'cpi' : [1, 1],
+    #     'ae' : [1, 1]
+    # }
+    # shocks = ['e1', 'e2', 'e3']
+    # td_col = ["Year", "Month"]
+    # member_col = "country"
+    # sr_constraint = []
+    # lr_constraint = [(1,2),(1,3),(2,3)]
+    # sr_sign = np.array([['.' for j in range(3)] for i in range(3)])
+    # lr_sign = sr_sign
+    # maxlags = 18 # maximum lags to be considered for common shock responses
+    # nsteps = 20   # desired number of steps for the impulse responses
+    # lagmethod = 'aic'
 
-    bootstrap = False
-    ndraws = 2000
-    signif = 0.05 # significance level of bootstrap
+    # bootstrap = False
+    # ndraws = 2000
+    # signif = 0.05 # significance level of bootstrap
     
     # Run VAR
     panel_input = VAR_input(variables=variables, shocks=shocks, td_col=td_col, member_col=member_col, M=None,

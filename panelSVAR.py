@@ -15,6 +15,7 @@ class Panel_output:
         self.lambda_df = lambda_df
 
 def panelSVAR(input):
+    print(input.df.head())
     # Process input dataframe
     if len(input.td_col) == 0:
         raise ValueError("Must include time column for panel data.")
@@ -87,18 +88,9 @@ def panelSVAR(input):
             y = merged_df.iloc[:, i]
             x = merged_df.iloc[:, input.size+i]
             linear = linregress(x, y)
-            Lambda[i, i] = linear.intercept
+            
+            Lambda[i, i] = linear.slope
             # 95% confidence band width = linear.stderr * 2
-
-        # INSTEAD OF THIS
-        # y = merged_df.iloc[:,:input.size]
-        # X = merged_df.iloc[:, input.size:]
-        # lin = LinearRegression()
-        # lin.fit(X, y)
-        # Lambda = lin.coef_.T # Must transpose
-
-        # comp_dict[member] = member_output
-        # lambda_dict[member] = Lambda
         
         # Write into dataframes
         def multiply_by_matrix(arr, mat):
