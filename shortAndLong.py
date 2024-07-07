@@ -31,20 +31,35 @@ def shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1):
     for lr_cons in lr_constraint:
         cons.append({'type':'eq', 'fun':lr_constraint_func, 'args':(lr_cons,)})
     
-    result = minimize(objective_func, m, constraints = cons)
+    ftol = 1e-7
+    for i, val in np.ndenumerate(Omega_mu):
+        if 0<val<ftol:
+            ftol = val
+
+    options = {
+        'ftol': ftol*1e-3,  # Function tolerance. Must be set carefully as the covariance numbers could be small
+        'disp': False    # Display the solver information
+    }
+
+    result = minimize(objective_func, m, constraints = cons, options = options)
     M = result.x.reshape((size, size)).T
-    
-    # print(M)
-    # print(result.message)
+
+    # print("Omega_mu:")
+    # print(Omega_mu, '\n')
+    # print("M*M^{-1}:")
+    # print(np.dot(M, M.T), '\n')
 
     return M
 
 def test():
     Omega_mu = np.array([[0.8,0.5],[0.5,0.8]])
     F1 = np.array([[4,5],[7,8]])
-    sr_constraint = [(1,2)]
-    lr_constraint = []
-    shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1)
+    sr_constraint = []
+    lr_constraint = [(1,2)]
+    M = shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1)
+    print(Omega_mu)
+    print(np.dot(M,M.T))
+
 
 if __name__ == "__main__":
     test()

@@ -57,6 +57,7 @@ def panelSVAR(input):
     comm_input.bootstrap = False
     common_output = SVAR(comm_input)
     common_shock = common_output.shock
+
     if comm_input.M is None:
         raise Exception("No M matrix generated. Check code.")
     if common_output.lag_order == 0:
@@ -81,18 +82,21 @@ def panelSVAR(input):
             continue
 
         composite_shock = member_output.shock
+
         # Merge with the common shock on index (td)
         merged_df = pd.merge(composite_shock, common_shock, left_index=True, right_index=True, how='inner')
         
         # Regress for diagonal matrix Lambda. Only estimate diagonal elements to improve efficiency.
-        Lambda = np.zeros((input.size, input.size))
+        Lambda = np.zeros(input.size)
         for i in range(input.size):
             y = merged_df.iloc[:, i]
             x = merged_df.iloc[:, input.size+i]
-            linear = linregress(x, y)
 
-            Lambda[i, i] = linear.slope
-            # 95% confidence band width = linear.stderr * 2
+            Lambda[i] = np.cov(x,y)[0,1]
+
+            # linear = linregress(x, y)
+            # Lambda[i] = linear.slope
+        Lambda = np.diag(Lambda)
         
         # Write into dataframes
         def multiply_by_matrix(arr, mat):

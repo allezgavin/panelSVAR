@@ -105,7 +105,8 @@ def SVAR(input):
     df = input.df[variable_names]
 
     # Convert to stationary form
-    # This cannot be done in __init__ of VAR_input because, in a data panel, the steady-state data must be averaged first before finding the log diff.
+    # This cannot be done in __init__ of VAR_input because, in a data panel,
+    # the steady-state data must be averaged first before finding the log diff.
     def log_diff(arr):
         log_arr = np.log(arr)
         return log_arr - log_arr.shift(1)
@@ -137,7 +138,10 @@ def SVAR(input):
         F1 = np.zeros((input.size, input.size))
         for f in irf.irfs:
             F1 += f
-        input.M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
+
+        #input.M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
+        input.M = shortAndLong(np.cov(output.shock.values.T), input.sr_constraint, input.lr_constraint, F1)
+
         A1 = np.dot(F1, input.M)
 
         # Sign constraint
@@ -148,17 +152,6 @@ def SVAR(input):
         flip_col = (np.sum((input.sr_sign!='.') & np.logical_xor(input.M<0, input.sr_sign=='-'),
                           axis=0) | np.sum((input.lr_sign!='.') & np.logical_xor(A1<0, input.lr_sign=='-'), axis=0)).astype(int)
         input.M = np.dot(input.M, np.diag(1-flip_col*2)) # 1(flip) -> -1, 0(don't flip) -> 1
-        
-        # signmat = np.identity(input.size)
-        # for i in range(input.size):
-        #     for j in range(input.size):
-        #         switch_sign = ((input.sr_sign[i, j] == '+' and input.M[i,j] < 0)
-        #                     or (input.sr_sign[i, j] == '-' and input.M[i,j] > 0)
-        #                     or (input.lr_sign[i, j] == '+' and A1[i,j] < 0)
-        #                     or (input.lr_sign[i, j] == '-' and A1[i,j] > 0))
-        #         if switch_sign:
-        #             signmat[j, j] = -1
-        # input.M = np.dot(input.M, signmat)
 
     print("Transformation matrix M:\n", input.M)
 
@@ -243,10 +236,11 @@ def SVAR(input):
                     for sk in range(input.size):
                         output.ir_lower[lg, vr, sk], output.ir_upper[lg, vr, sk] = stats.mstats.mquantiles(
                             IRs[:, lg, vr, sk], [input.signif / 2, 1 - input.signif / 2])
-                    
-
+ 
+    M_inv = np.linalg.inv(input.M)
     for i in range(len(output.shock)):
-        output.shock.iloc[i, :] = np.dot(np.linalg.inv(input.M), output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
+        # print(output.shock.iloc[i,:])
+        output.shock.iloc[i, :] = np.dot(M_inv, output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
 
     # Convert to impulse reponse of steady state for unit root variables
     for i, var in enumerate(variable_names):
