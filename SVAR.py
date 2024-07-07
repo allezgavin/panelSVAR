@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.tsa.api import VAR
 from plotting import plot_ir
-from shortAndLong import shortAndLong
+from identification import findM
 import copy
 from scipy import stats
     
@@ -12,7 +12,7 @@ class VAR_input:
     __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'M', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     
-    def __init__(self, variables, shocks, td_col=[], member_col="", M=None, sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
+    def __init__(self, variables, shocks, td_col=[], member_col="", M=None, sr_constraint=np.array([]), lr_constraint=np.array([]), sr_sign=np.array([]), lr_sign=np.array([]),
                  maxlags=5, nsteps=12, lagmethod='aic', bootstrap=True, ndraws=2000, signif=0.05,
                  excel_path="", excel_sheet_name="", df=pd.DataFrame(), plot=True, savefig_path=""):
         # Build input dataframe
@@ -139,8 +139,8 @@ def SVAR(input):
         for f in irf.irfs:
             F1 += f
 
-        input.M = shortAndLong(np.cov(output.shock.values.T), input.sr_constraint, input.lr_constraint,
-                               input.sr_sign, input.lr_sign, F1)
+        input.M = findM(np.cov(output.shock.values.T), F1, input.sr_constraint, input.lr_constraint,
+                               input.sr_sign, input.lr_sign)
 
     output.ir = irf.irfs
     for i in range(input.nsteps+1):
@@ -175,7 +175,7 @@ def SVAR(input):
                 for j in range(shuffled_shock.shape[0]):
                     shuffled_shock[j] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]-1)]
             
-            shuffled_shock = shuffled_shock / 1
+            # shuffled_shock = shuffled_shock / 1
 
             # Generate bootstrap data
             drop_const = True

@@ -92,8 +92,9 @@ def run_panel_ppp():
     shocks = ['e1', 'e2', 'e3']
     td_col = ["Year", "Month"]
     member_col = "country"
-    sr_constraint = []
-    lr_constraint = [(1,2),(1,3),(2,3)]
+    lr_constraint = np.array([['.','0','0'],
+                            ['.','.','0'],
+                            ['.','.','.']])
     sr_sign = np.array([['+','+','+'],
                         ['.','.','.'],
                         ['.','.','.']])
@@ -110,7 +111,7 @@ def run_panel_ppp():
     
     # Run VAR
     panel_input = VAR_input(variables=variables, shocks=shocks, td_col=td_col, member_col=member_col, M=None,
-                sr_constraint=sr_constraint, lr_constraint=lr_constraint, sr_sign=sr_sign, lr_sign=lr_sign,
+                lr_constraint=lr_constraint, sr_sign=sr_sign, lr_sign=lr_sign,
                 maxlags=maxlags, nsteps=nsteps, lagmethod=lagmethod, bootstrap=bootstrap, ndraws=ndraws, signif=signif,
                 excel_path=excel_path, excel_sheet_name=excel_sheet_name, df=pd.DataFrame(), plot=plot, savefig_path=savefig_path)
     panelSVAR(panel_input)
