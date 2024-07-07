@@ -9,10 +9,10 @@ from scipy import stats
     
 # Encapsulation of input to provide default values and keep modularity
 class VAR_input:
-    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
+    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'M', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     
-    def __init__(self, variables, shocks, td_col=[], member_col="", sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
+    def __init__(self, variables, shocks, td_col=[], member_col="", M=None, sr_constraint=[], lr_constraint=[], sr_sign=np.array([]), lr_sign=np.array([]),
                  maxlags=5, nsteps=12, lagmethod='aic', bootstrap=True, ndraws=2000, signif=0.05,
                  excel_path="", excel_sheet_name="", df=pd.DataFrame(), plot=True, savefig_path=""):
         # Build input dataframe
@@ -40,17 +40,23 @@ class VAR_input:
             self.df.sort_values(by=td_col, inplace=True)
         self.member_col = member_col
         
+        self.M = M
         self.sr_constraint = sr_constraint
         self.lr_constraint = lr_constraint
 
-        if len(sr_sign) > 0:
+        if len(sr_sign) == 0:
+            sr_sign = np.full((self.size, self.size), '.')
+        else:
+            if sr_sign.shape != (self.size, self.size):
+                raise ValueError("Incorrect dimensions for short-run sign restrictions.")
             self.sr_sign = sr_sign
+        
+        if len(lr_sign) == 0:
+            lr_sign = np.full((self.size, self.size), '.')
         else:
-            sr_sign = np.asarray([['.' for i in range(self.size)] for j in range(self.size)])
-        if len(lr_sign) > 0:
+            if lr_sign.shape != (self.size, self.size):
+                raise ValueError("Incorrect dimensions for long-run sign restrictions.")
             self.lr_sign = lr_sign
-        else:
-            self.lr_sign = np.asarray([['.' for i in range(self.size)] for j in range(self.size)])
 
         self.maxlags = maxlags
         self.nsteps = nsteps
@@ -71,7 +77,23 @@ class VAR_output:
         self.ir_upper = ir_upper
         self.ir_lower = ir_lower
         self.fevd = fevd
-        
+
+def VAR_predict(var_df, coefs, const):
+    size = var_df.shape[1]
+    order = var_df.shape[0]
+    try:
+        coefs = np.reshape(coefs, (order, size, size))
+    except:
+        raise ValueError("Invalid input.")
+
+    # print(coefs)
+    # raise Exception
+
+    output = const.copy()
+    for l in range(order):
+        output += np.dot(var_df.iloc[order-1-l], coefs[l])
+    return output
+
 def SVAR(input):
     output = VAR_output()
 
@@ -83,7 +105,8 @@ def SVAR(input):
     df = input.df[variable_names]
 
     # Convert to stationary form
-    # This cannot be done in __init__ of VAR_input because, in a data panel, the steady-state data must be averaged first before finding the log diff.
+    # This cannot be done in __init__ of VAR_input because, in a data panel,
+    # the steady-state data must be averaged first before finding the log diff.
     def log_diff(arr):
         log_arr = np.log(arr)
         return log_arr - log_arr.shift(1)
@@ -107,40 +130,40 @@ def SVAR(input):
     output.shock = df.iloc[output.lag_order:, :] - prediction # This step calculates mu. Will be tranformed into epsilon
 
     # Estimate impulse response, without any transformation of the shocks (FACTOR = %identity(m))
-    
     irf = results.irf(input.nsteps)
     # print(irf.irfs)
 
-
-
+    if input.M is None:
     # Calculate decomposition matrix M
-    F1 = np.zeros((input.size, input.size))
-    for f in irf.irfs:
-        F1 += f
-    M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
-    A1 = np.dot(F1, M)
-    # Sign constraint
-    signmat = np.identity(input.size)
-    for i in range(input.size):
-        for j in range(input.size):
-            switch_sign = ((input.sr_sign[i, j] == '+' and M[i,j] < 0)
-                           or (input.sr_sign[i, j] == '-' and M[i,j] > 0)
-                           or (input.lr_sign[i, j] == '+' and A1[i,j] < 0)
-                           or (input.lr_sign[i, j] == '-' and A1[i,j] > 0))
-            if switch_sign:
-                signmat[j, j] = -1
-    M = np.dot(M, signmat)
-    # print(M) # The M, or A0 matrix
+        F1 = np.zeros((input.size, input.size))
+        for f in irf.irfs:
+            F1 += f
+
+        #input.M = shortAndLong(results.sigma_u, input.sr_constraint, input.lr_constraint, F1)
+        input.M = shortAndLong(np.cov(output.shock.values.T), input.sr_constraint, input.lr_constraint, F1)
+
+        A1 = np.dot(F1, input.M)
+
+        # Sign constraint
+        if not np.all(np.sum((input.sr_sign == '+') | (input.sr_sign == '-'), axis = 0)
+                      + np.sum((input.lr_sign == '+') | (input.lr_sign == '-'), axis = 0) == 1):
+            raise ValueError("Each column must have exactly one sign restriction.")
+
+        flip_col = (np.sum((input.sr_sign!='.') & np.logical_xor(input.M<0, input.sr_sign=='-'),
+                          axis=0) | np.sum((input.lr_sign!='.') & np.logical_xor(A1<0, input.lr_sign=='-'), axis=0)).astype(int)
+        input.M = np.dot(input.M, np.diag(1-flip_col*2)) # 1(flip) -> -1, 0(don't flip) -> 1
+
+    print("Transformation matrix M:\n", input.M)
 
     output.ir = irf.irfs
     for i in range(input.nsteps+1):
-        output.ir[i] = np.dot(output.ir[i], M)
-    
+        output.ir[i] = np.dot(output.ir[i], input.M)
     
     if input.bootstrap:
         print("Bootstrapping in progress...")
         normal_interval = False
-        draw_from_normal = True
+        draw_from_normal = False
+        burn = 100
         
         # Initialize output storage
         if normal_interval:
@@ -157,16 +180,36 @@ def SVAR(input):
             boot_input.plot = False
             boot_input.td_col = ""
 
+            shuffled_shock = np.zeros((output.shock.shape[0]+burn, input.size))
             if draw_from_normal:
-                shuffled_shock = np.random.multivariate_normal(np.array([0,0]), results.sigma_u, output.shock.shape[0])
+                shuffled_shock = np.random.multivariate_normal(np.array([0,0]), results.sigma_u, shuffled_shock.shape[0])
             else:
                 # Draw randomly with replacement
-                shuffled_shock = np.empty_like(output.shock)
                 for j in range(shuffled_shock.shape[0]):
-                    shuffled_shock[j, :] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]), :]
+                    shuffled_shock[j] = output.shock.iloc[np.random.randint(0, output.shock.shape[0]-1)]
             
+            shuffled_shock = shuffled_shock / 1
+
+            # Generate bootstrap data
+            drop_const = True
+
+            initial_cond = np.zeros((output.lag_order, input.size))
+            initial_cond = df.iloc[output.lag_order:]
+            boot_input.df = pd.DataFrame(columns = variable_names, data = np.concatenate((initial_cond, shuffled_shock), axis=0))
+
+            coefs = np.array(results.params.iloc[1:])
+            const = np.zeros(input.size)
+
+            if not drop_const:
+                const = np.array(results.params.iloc[0])
+
+            for p in range(output.lag_order, boot_input.df.shape[0]):
+                boot_input.df.iloc[p] += VAR_predict(boot_input.df.iloc[p-output.lag_order : p], coefs, const)
+
+            boot_input.df = boot_input.df.iloc[burn:]
+
             # Find impulse response subject to structrual restrictions
-            boot_input.df = pd.DataFrame(columns = variable_names, data = prediction+shuffled_shock)
+            
             boot_output = SVAR(boot_input)
             if boot_output.lag_order == 0:
                 # Unsuccessful VAR. No lags selected. Treat all VMA coefs as zero.
@@ -176,7 +219,7 @@ def SVAR(input):
                 mean_accum += boot_output.ir
                 sq_diff_accum += boot_output.ir ** 2
             else:
-                IRs[i, :, :, :] = boot_output.ir
+                IRs[i] = boot_output.ir
             
         if normal_interval:
             boot_mean = mean_accum / input.ndraws
@@ -193,10 +236,11 @@ def SVAR(input):
                     for sk in range(input.size):
                         output.ir_lower[lg, vr, sk], output.ir_upper[lg, vr, sk] = stats.mstats.mquantiles(
                             IRs[:, lg, vr, sk], [input.signif / 2, 1 - input.signif / 2])
-                    
-
+ 
+    M_inv = np.linalg.inv(input.M)
     for i in range(len(output.shock)):
-        output.shock.iloc[i, :] = np.dot(np.linalg.inv(M), output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
+        # print(output.shock.iloc[i,:])
+        output.shock.iloc[i, :] = np.dot(M_inv, output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
 
     # Convert to impulse reponse of steady state for unit root variables
     for i, var in enumerate(variable_names):
