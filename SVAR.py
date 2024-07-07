@@ -9,10 +9,10 @@ from scipy import stats
     
 # Encapsulation of input to provide default values and keep modularity
 class VAR_input:
-    __slots__ = ['df', 'size', 'variables', 'shocks', 'td_col', 'member_col', 'M', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
+    __slots__ = ['df', 'size', 'variables', 'variable_order', 'shocks', 'td_col', 'member_col', 'M', 'sr_constraint', 'lr_constraint', 'sr_sign', 'lr_sign',
                  'maxlags', 'nsteps', 'lagmethod', 'bootstrap', 'ndraws', 'signif', 'plot', 'savefig_path']
     
-    def __init__(self, variables, shocks, td_col=[], member_col="", M=None, sr_constraint=np.array([]), lr_constraint=np.array([]), sr_sign=np.array([]), lr_sign=np.array([]),
+    def __init__(self, variables, variable_order, shocks, td_col=[], member_col="", M=None, sr_constraint=np.array([]), lr_constraint=np.array([]), sr_sign=np.array([]), lr_sign=np.array([]),
                  maxlags=5, nsteps=12, lagmethod='aic', bootstrap=True, ndraws=2000, signif=0.05,
                  excel_path="", excel_sheet_name="", df=pd.DataFrame(), plot=True, savefig_path=""):
         # Build input dataframe
@@ -28,6 +28,11 @@ class VAR_input:
                 raise ValueError("Empty input data.")
         
         self.variables = variables
+        self.variable_order = variable_order
+        for var in variable_order:
+            if var not in variables:
+                raise Exception("Stationarity of variable " + var + " is not specified.")
+
         self.shocks = shocks
         self.size = len(self.variables)
         if len(self.shocks) != self.size:
@@ -45,14 +50,14 @@ class VAR_input:
         self.lr_constraint = lr_constraint
 
         if len(sr_sign) == 0:
-            sr_sign = np.full((self.size, self.size), '.')
+            self.sr_sign = np.full((self.size, self.size), '.')
         else:
             if sr_sign.shape != (self.size, self.size):
                 raise ValueError("Incorrect dimensions for short-run sign restrictions.")
             self.sr_sign = sr_sign
         
         if len(lr_sign) == 0:
-            lr_sign = np.full((self.size, self.size), '.')
+            self.lr_sign = np.full((self.size, self.size), '.')
         else:
             if lr_sign.shape != (self.size, self.size):
                 raise ValueError("Incorrect dimensions for long-run sign restrictions.")
@@ -101,8 +106,7 @@ def SVAR(input):
         # Would raise error if there are duplicate times.
         input.df.set_index(input.td_col, inplace = True)
 
-    variable_names = list(input.variables.keys())
-    df = input.df[variable_names]
+    df = input.df[input.variable_order]
 
     # Convert to stationary form
     # This cannot be done in __init__ of VAR_input because, in a data panel,
@@ -182,7 +186,7 @@ def SVAR(input):
 
             initial_cond = np.zeros((output.lag_order, input.size))
             initial_cond = df.iloc[output.lag_order:]
-            boot_input.df = pd.DataFrame(columns = variable_names, data = np.concatenate((initial_cond, shuffled_shock), axis=0))
+            boot_input.df = pd.DataFrame(columns = input.variable_order, data = np.concatenate((initial_cond, shuffled_shock), axis=0))
 
             coefs = np.array(results.params.iloc[1:])
             const = np.zeros(input.size)
@@ -230,7 +234,7 @@ def SVAR(input):
         output.shock.iloc[i, :] = np.dot(M_inv, output.shock.iloc[i,:].T).T # epsilon = M^(-1) * mu
 
     # Convert to impulse reponse of steady state for unit root variables
-    for i, var in enumerate(variable_names):
+    for i, var in enumerate(input.variable_order):
         if input.variables[var][1] == 1:
             output.ir[:, i, :] = output.ir[:, i, :].cumsum(axis=0)
 
@@ -250,7 +254,7 @@ def SVAR(input):
     # print(VD)
 
     if input.plot:
-        plot_ir(variable_names, input.shocks, output.ir,
+        plot_ir(input.variable_order, input.shocks, output.ir,
                 lower_errband=output.ir_lower, upper_errband=output.ir_upper,
                 show_plot=True, save_plot=True, plot_path=input.savefig_path)
     
