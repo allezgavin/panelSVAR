@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import minimize
 
-def shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1):
+def shortAndLong(Omega_mu, sr_constraint, lr_constraint, sr_sign, lr_sign, F1):
     if np.array_equal(Omega_mu, Omega_mu.T):
         size = Omega_mu.shape[0]
     else:
@@ -43,6 +43,18 @@ def shortAndLong(Omega_mu, sr_constraint, lr_constraint, F1):
 
     result = minimize(objective_func, m, constraints = cons, options = options)
     M = result.x.reshape((size, size)).T
+
+    # Sign constraint
+    if not np.all(np.sum((sr_sign == '+') | (sr_sign == '-'), axis = 0)
+                    + np.sum((lr_sign == '+') | (lr_sign == '-'), axis = 0) == 1):
+        raise ValueError("Each column must have exactly one sign restriction.")
+
+    flip_col = (np.sum((sr_sign!='.') & np.logical_xor(M<0, sr_sign=='-'),
+                        axis=0) | np.sum((lr_sign!='.') & np.logical_xor(np.dot(F1, M)<0, lr_sign=='-'), axis=0)).astype(int)
+    M = np.dot(M, np.diag(1-flip_col*2)) # 1(flip) -> -1, 0(don't flip) -> 1
+
+    print("Transformation matrix M:")
+    print(M, "\n")
 
     # print("Omega_mu:")
     # print(Omega_mu, '\n')
