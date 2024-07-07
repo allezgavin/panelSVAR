@@ -19,7 +19,7 @@ warnings.filterwarnings("ignore", category=UserWarning, module="statsmodels")
 def run_panel_test():
     plot = False
     savefig_path = ""
-    excel_path = "test-run.xls"
+    excel_path = "data/test-run.xls"
     excel_sheet_name = "Panel6_comm_all"
     variables = {
         # 1 for unit root, 0 for stationary
@@ -54,7 +54,7 @@ def run_panel_ppp():
     
     # plot = False
     # savefig_path = ""
-    # excel_path = "pedroni_ppp.xls"
+    # excel_path = "data/pedroni_ppp.xls"
     # excel_sheet_name = "Sheet1"
     # variables = {
     #     # 1 for unit root, 0 for stationary
@@ -81,7 +81,7 @@ def run_panel_ppp():
 
     plot = False
     savefig_path = ""
-    excel_path = "pedroni_ppp.xls"
+    excel_path = "data/pedroni_ppp.xls"
     excel_sheet_name = "Sheet1"
     variables = {
         # 1 for unit root, 0 for stationary
@@ -120,7 +120,7 @@ def run_var():
     # EXAMPLE IMPUT BELOW
     plot = True
     savefig_path = ""
-    excel_path = "AustraliaData.xlsx"
+    excel_path = "data/AustraliaData.xlsx"
     excel_sheet_name = "Panel6_comm_all"
     variables = {
         # 1 for unit root, 0 for stationary
@@ -149,7 +149,7 @@ def run_var():
     # INPUT SECTION
     plot = True
     savefig_path = ""
-    excel_path = "bqdata.xlsx"
+    excel_path = "data/bqdata.xlsx"
     excel_sheet_name = "econ471-bqdata"
     variables = {
         # 1 for unit root, 0 for stationary
