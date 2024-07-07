@@ -7,10 +7,13 @@ Variance decomposition and bootstrapping are currently in development.
 ## Contribution
 Your contributions are welcome and appreciated! To contribute:
 
-Fork the repository.
-Create a new branch with your feature or fix.
-Commit your changes and push the branch to your forked repository.
-Create a pull request with a description of your changes.
+1. Fork the repository.
+
+2. Create a new branch with your feature or fix.
+
+3. Commit your changes and push the branch to your forked repository.
+
+4. Create a pull request with a description of your changes.
 
 ## Contact
 For any questions, contributions, or issues, please contact Prof. Peter Pedroni at ppedroni@williams.edu or Gavin Xia at gx1@williams.edu.
