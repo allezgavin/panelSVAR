@@ -108,7 +108,9 @@ def findM(Omega_mu, F1, sr_constraint=np.array([]), lr_constraint=np.array([]), 
     if np.any((lr_constraint!='.') & (lr_sign!='.')):
         raise ValueError("(Long-run) zero-constraint and sign restriction cannot be set on the same index.")
 
-    has_constraint = (sr_constraint=='0')| (lr_constraint=='0')
+    # Short- and long-term constraints set simultaneously are count as 2 constraints
+    has_constraint = (sr_constraint=='0').astype(int) + (lr_constraint=='0').astype(int)
+
     constraint_count_col = np.sum(has_constraint, axis=0)
     constraint_count_row = np.sum(has_constraint, axis=1)
 
@@ -167,18 +169,22 @@ def findM(Omega_mu, F1, sr_constraint=np.array([]), lr_constraint=np.array([]), 
 def test():
     Omega_mu = np.array([[4, 12, 16],
                         [12, 37, 43],
-                        [16, 43, 98]])[[1,0,2],:][:,[1,0,2]]
+                        [16, 43, 98]])
     F1 = np.array([[4,5,6],
                    [7,8,9],
                    [10,11,12]])
     lr_sign = np.array([['-','.','.'],
                         ['.','+','+'],
                          ['.','.','.']])
-    sr_constraint = np.array([['.','.','0'],
-                             ['0','.','0'],
+    lr_constraint = np.array([['.','.','0'],
+                             ['.','.','.'],
                              ['.','.','.']])
-    M = findM(Omega_mu, F1, sr_constraint=sr_constraint, lr_sign=lr_sign)
+    sr_constraint = np.array([['.','.','0'],
+                             ['.','0','.'],
+                             ['.','.','.']])
+    M = findM(Omega_mu, F1, sr_constraint=sr_constraint, lr_constraint=lr_constraint, lr_sign=lr_sign)
     print(Omega_mu)
+    print(np.dot(F1,M))
     print(np.dot(M,M.T))
 
 
