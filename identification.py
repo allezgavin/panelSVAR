@@ -138,12 +138,13 @@ def findM(Omega_mu, F1, sr_constraint=np.array([]), lr_constraint=np.array([]), 
 
         else:
             sorted_Omega = Omega_mu[:, sorted_columns][sorted_columns, :]
+            sorted_F1 = F1[:, sorted_columns][sorted_columns, :]
             if sr_constraint_list:
                 # print("Short-run Cholesky")
                 M = np.linalg.cholesky(sorted_Omega)
             else:
                 # print("Long-run Cholesky")
-                M = np.dot(np.linalg.inv(F1), np.linalg.cholesky(np.dot(np.dot(F1, sorted_Omega), F1.T)))
+                M = np.dot(np.linalg.inv(sorted_F1), np.linalg.cholesky(np.dot(np.dot(sorted_F1, sorted_Omega), sorted_F1.T)))
             
             # Revert back to original column order
             order_columns = np.argsort(sorted_columns)
