@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def plot_ir(variables, shocks, irf, lower_errband = [], upper_errband = [], show_plot = False, save_plot = False, plot_path = ''):
+def plot_ir(variables, shocks, irf, lower_errband = [], upper_errband = [], show_plot = False, save_plot = False, plot_path = 'output/'):
     """
     Plot impulse response functions in a grid.
 

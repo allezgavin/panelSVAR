@@ -14,7 +14,7 @@ class VAR_input:
     
     def __init__(self, variables, variable_order, shocks, td_col=[], member_col="", M=None, sr_constraint=np.array([]), lr_constraint=np.array([]), sr_sign=np.array([]), lr_sign=np.array([]),
                  maxlags=5, nsteps=12, lagmethod='aic', bootstrap=True, ndraws=2000, signif=0.05,
-                 excel_path="", excel_sheet_name="", df=pd.DataFrame(), plot=True, savefig_path=""):
+                 excel_path="", excel_sheet_name="", df=pd.DataFrame(), plot=True, savefig_path="output/"):
         # Build input dataframe
         if excel_path != "":
             if excel_sheet_name != "":

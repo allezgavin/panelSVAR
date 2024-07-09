@@ -1,6 +1,9 @@
 __pycache__/
+*.ipynb
 *.ipynb_checkpoints
 .DS_Store
 
 data/
 output/
+
+test.py
