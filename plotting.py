@@ -23,7 +23,8 @@ def plot_ir(variables, shocks, irf, lower_errband = [], upper_errband = [], show
 
     for i, var in enumerate(variables):
         for j, shock in enumerate(shocks):
-            ax = axes[j, i]
+            # ax = axes[j, i]
+            ax = axes[i, j]
 
             # Plot impulse response function
             ax.plot(irf[:, i, j], color=sns.color_palette("husl")[i])

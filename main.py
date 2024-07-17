@@ -52,31 +52,28 @@ def run_panel():
     variables = {
         # 1 for unit root, 0 for stationary
         'Ereal' : [1, 1],
-        'cpi' : [1, 1],
         'ae' : [1, 1]
     }
-    variable_order = ['Ereal','ae','cpi']
-    shocks = ['e1', 'e2', 'e3']
+    variable_order = ['Ereal', 'ae']
+    shocks = ['Real', 'Nominal']
     td_col = ["Year", "Month"]
     member_col = "country"
-    sr_constraint = np.array([])
-    lr_constraint = np.array([['.','0','0'],
-                            ['.','.','0'],
-                            ['.','.','.']])
-    sr_sign = np.array([['+','+','+'],
-                        ['.','.','.'],
-                        ['.','.','.']])
-    maxlags = 18 # maximum lags to be considered for common shock responses
+    lr_constraint = np.array([['.','0'],
+                            ['.','.']])
+    lr_sign = np.array([['+','.'],
+                        ['.','+']])
+    maxlags = 10 # maximum lags to be considered for common shock responses
     nsteps = 20   # desired number of steps for the impulse responses
     lagmethod = 'aic'
 
     bootstrap = False
     ndraws = 2000
     signif = 0.05 # significance level of bootstrap
+
     
     # Run VAR
     panel_input = VAR_input(variables=variables, variable_order=variable_order, shocks=shocks, td_col=td_col, member_col=member_col, M=None,
-                sr_constraint=sr_constraint, lr_constraint=lr_constraint, sr_sign=sr_sign,
+                lr_constraint=lr_constraint, lr_sign=lr_sign,
                 maxlags=maxlags, nsteps=nsteps, lagmethod=lagmethod, bootstrap=bootstrap, ndraws=ndraws, signif=signif,
                 excel_path=excel_path, excel_sheet_name=excel_sheet_name, df=pd.DataFrame(), plot=plot, savefig_path=savefig_path)
     panelSVAR(panel_input)
@@ -128,7 +125,6 @@ def run_var():
     shocks = ['AS', 'AD']
     td_col = ""
     member_col = "" # Not a panel so no member column
-    sr_constraint = np.array([])
     lr_constraint = np.array([['.','0'],
                             ['.','.']])
     sr_sign = np.array([['.','+'],
@@ -139,7 +135,7 @@ def run_var():
     nsteps = 20 # desired number of steps for the impulse responses
     lagmethod = 'aic'
 
-    bootstrap = True
+    bootstrap = False
     ndraws = 200
     signif = 0.32 # significance level of bootstrap
 

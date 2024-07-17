@@ -35,7 +35,8 @@ def panelSVAR(input):
             if input.variables[var][0] == 1:
                 input.variables[var][0] = 0
                 unit_root_var.append(var)
-        input.df[unit_root_var] = input.df.groupby(input.member_col)[unit_root_var].transform(lambda x : np.log(x) - np.log(x).shift(1))
+        if unit_root_var:
+            input.df[unit_root_var] = input.df.groupby(input.member_col)[unit_root_var].transform(lambda x : np.log(x) - np.log(x).shift(1))
 
     # Initialize output spreadsheets
     comp_df = pd.DataFrame(index=members, columns=elements)
